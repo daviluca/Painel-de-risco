@@ -1,0 +1,1174 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VCA · Painel de Riscos · Vitória da Conquista</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+<style>
+:root{
+  --bg:#0a0d12;
+  --bg-elev:#11161e;
+  --bg-elev-2:#171e28;
+  --border:#1f2731;
+  --border-strong:#2a3340;
+  --fg:#e6edf3;
+  --fg-dim:#8b95a3;
+  --fg-faint:#5a6470;
+  --accent:#3fb8af;
+  --r-criadouros:#ffb74d;
+  --r-incubacao:#c77dff;
+  --r-transmissao:#e63946;
+  --radius:10px;
+  --shadow:0 10px 30px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+  font-family:"Geist","Inter",system-ui,sans-serif;font-size:14px;overflow:hidden}
+
+#map{position:absolute;inset:0;background:var(--bg)}
+.leaflet-container{background:var(--bg)!important;font-family:inherit}
+.leaflet-control-attribution{background:rgba(10,13,18,.7)!important;color:var(--fg-faint)!important;
+  font-size:10px;backdrop-filter:blur(6px)}
+.leaflet-control-attribution a{color:var(--fg-dim)!important}
+
+/* ---------- Painel lateral ---------- */
+.panel{
+  position:absolute;top:16px;left:16px;width:320px;max-height:calc(100vh - 32px);
+  background:rgba(17,22,30,.82);backdrop-filter:blur(14px) saturate(140%);
+  border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);display:flex;flex-direction:column;z-index:1000;
+  overflow:hidden;
+}
+.panel header{padding:18px 20px 14px;border-bottom:1px solid var(--border)}
+.panel h1{
+  font-family:"Bricolage Grotesque",serif;font-weight:600;
+  font-size:20px;letter-spacing:-.02em;margin:0 0 4px;line-height:1.1
+}
+.panel h1 span{color:var(--accent)}
+.panel .sub{color:var(--fg-dim);font-size:11.5px;letter-spacing:.04em;
+  text-transform:uppercase;font-weight:500}
+
+.scroll{overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+.scroll::-webkit-scrollbar{width:6px}
+.scroll::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+
+.section{padding:14px 20px;border-bottom:1px solid var(--border)}
+.section:last-child{border-bottom:none}
+.section h2{
+  font-family:"Geist";font-size:10.5px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--fg-faint);margin:0 0 10px
+}
+
+/* ---------- Stats topo ---------- */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:var(--bg-elev-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.stat .v{font-family:"Bricolage Grotesque",serif;font-size:22px;font-weight:600;line-height:1}
+.stat .k{font-size:10.5px;color:var(--fg-dim);margin-top:4px;letter-spacing:.04em;text-transform:uppercase}
+
+/* hero card (total de imóveis) */
+.hero{
+  background:linear-gradient(135deg, var(--bg-elev-2), var(--bg-elev));
+  border:1px solid var(--border);border-radius:10px;padding:16px 18px;
+  position:relative;overflow:hidden
+}
+.hero::after{
+  content:"";position:absolute;right:-30px;top:-30px;width:140px;height:140px;
+  background:radial-gradient(circle, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%);
+  pointer-events:none
+}
+.hero-num{
+  font-family:"Bricolage Grotesque",serif;font-size:34px;font-weight:600;
+  letter-spacing:-.025em;line-height:1;color:var(--fg)
+}
+.hero-lbl{
+  font-size:11.5px;color:var(--fg-dim);margin-top:6px;
+  letter-spacing:.06em;text-transform:uppercase;font-weight:500
+}
+.hero-foot{
+  margin-top:12px;padding-top:10px;border-top:1px solid var(--border);
+  font-size:11.5px;color:var(--fg-dim)
+}
+.hero-foot span{font-family:"JetBrains Mono",monospace;color:var(--fg);font-weight:600}
+
+/* ---------- Card de camada ---------- */
+.layer{
+  background:var(--bg-elev-2);border:1px solid var(--border);
+  border-radius:8px;padding:12px;margin-bottom:8px;transition:border-color .15s
+}
+.layer:last-child{margin-bottom:0}
+.layer:hover{border-color:var(--border-strong)}
+.layer.off{opacity:.45}
+.layer-head{display:flex;align-items:center;gap:10px}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent)}
+.layer-name{font-weight:500;font-size:13.5px;flex:1;letter-spacing:-.005em}
+
+.metrics{display:flex;align-items:baseline;gap:6px;margin-top:8px;flex-wrap:wrap}
+.metric-n{font-family:"Bricolage Grotesque",serif;font-size:20px;font-weight:600;
+  color:var(--fg);line-height:1;letter-spacing:-.01em}
+.metric-sep{color:var(--fg-faint);font-size:14px}
+.metric-p{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:600;color:var(--c)}
+.metric-lbl{font-size:10.5px;color:var(--fg-faint);text-transform:uppercase;
+  letter-spacing:.08em;margin-left:2px}
+
+/* toggle switch */
+.toggle{position:relative;width:32px;height:18px;flex-shrink:0;cursor:pointer}
+.toggle input{position:absolute;opacity:0;inset:0}
+.toggle .track{position:absolute;inset:0;background:var(--border-strong);border-radius:9px;transition:background .2s}
+.toggle .thumb{position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;
+  border-radius:50%;transition:transform .2s,background .2s}
+.toggle input:checked + .track{background:var(--c)}
+.toggle input:checked + .track + .thumb{transform:translateX(14px);background:#fff}
+
+.desc{font-size:11.5px;color:var(--fg-dim);margin:8px 0 10px;line-height:1.4}
+
+.slider-row{display:flex;align-items:center;gap:10px}
+.slider-row label{font-size:10.5px;color:var(--fg-faint);text-transform:uppercase;letter-spacing:.08em;min-width:55px}
+.slider{flex:1;-webkit-appearance:none;appearance:none;height:3px;
+  background:var(--border-strong);border-radius:2px;outline:none}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--c);cursor:pointer;border:2px solid var(--bg-elev-2)}
+.slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--c);
+  cursor:pointer;border:2px solid var(--bg-elev-2)}
+.val{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--fg);min-width:32px;text-align:right}
+
+/* ---------- Basemap selector ---------- */
+.bases{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.base{padding:8px 6px;background:var(--bg-elev-2);border:1px solid var(--border);border-radius:6px;
+  cursor:pointer;font-size:11.5px;text-align:center;color:var(--fg-dim);
+  transition:all .15s;font-family:inherit}
+.base:hover{color:var(--fg);border-color:var(--border-strong)}
+.base.active{background:var(--accent);color:#0a1a18;border-color:var(--accent);font-weight:600}
+
+/* ---------- Footer ---------- */
+.foot{padding:10px 20px;background:rgba(10,13,18,.6);border-top:1px solid var(--border);
+  font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--fg-dim);
+  display:flex;justify-content:space-between;gap:8px}
+.foot .coord{color:var(--fg)}
+
+/* ---------- Toggle painel (mobile) ---------- */
+.panel-toggle{
+  position:absolute;top:16px;right:16px;width:42px;height:42px;
+  background:rgba(17,22,30,.85);backdrop-filter:blur(14px);
+  border:1px solid var(--border);border-radius:var(--radius);
+  display:none;align-items:center;justify-content:center;cursor:pointer;
+  z-index:1001;color:var(--fg);box-shadow:var(--shadow)
+}
+
+/* ---------- Loading overlay ---------- */
+.loader{
+  position:absolute;bottom:24px;right:24px;z-index:1000;
+  background:rgba(17,22,30,.92);backdrop-filter:blur(10px);
+  border:1px solid var(--border);border-radius:8px;
+  padding:10px 14px;font-size:12px;color:var(--fg-dim);
+  display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);
+  transition:opacity .4s,transform .4s
+}
+.loader.done{opacity:0;transform:translateY(8px);pointer-events:none}
+.spin{width:12px;height:12px;border:2px solid var(--border-strong);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- Popup ---------- */
+.leaflet-popup-content-wrapper{
+  background:rgba(17,22,30,.95)!important;color:var(--fg)!important;
+  border:1px solid var(--border)!important;border-radius:8px!important;
+  box-shadow:var(--shadow)!important;backdrop-filter:blur(10px)
+}
+.leaflet-popup-tip{background:rgba(17,22,30,.95)!important;border:1px solid var(--border)!important}
+.leaflet-popup-close-button{color:var(--fg-dim)!important}
+.popup{font-family:"Geist",sans-serif;min-width:200px}
+.popup .ptitle{font-family:"Bricolage Grotesque",serif;font-size:14px;font-weight:600;
+  margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);color:var(--c)}
+.popup table{width:100%;font-size:11.5px;border-collapse:collapse}
+.popup td{padding:2px 0;vertical-align:top}
+.popup td:first-child{color:var(--fg-dim);padding-right:10px;text-transform:capitalize}
+.popup td:last-child{font-family:"JetBrains Mono",monospace;text-align:right;color:var(--fg)}
+
+/* ---------- Busca de endereços (MapBox) ---------- */
+.search-wrap{
+  position:absolute;top:16px;right:16px;width:360px;max-width:calc(100vw - 32px);
+  z-index:1000;font-family:inherit
+}
+.search-box{
+  background:rgba(17,22,30,.88);backdrop-filter:blur(14px) saturate(140%);
+  border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);display:flex;align-items:center;
+  height:44px;padding:0 4px 0 14px;transition:border-color .15s
+}
+.search-box:focus-within{border-color:var(--accent)}
+.search-box svg.ico{flex-shrink:0;color:var(--fg-faint)}
+.search-box input{
+  flex:1;background:transparent;border:none;outline:none;color:var(--fg);
+  font-family:inherit;font-size:13.5px;padding:0 10px;height:100%;letter-spacing:-.005em
+}
+.search-box input::placeholder{color:var(--fg-faint)}
+.search-clear{
+  width:28px;height:28px;border:none;background:transparent;color:var(--fg-faint);
+  cursor:pointer;border-radius:6px;display:none;align-items:center;justify-content:center;
+  transition:all .15s
+}
+.search-clear:hover{color:var(--fg);background:var(--bg-elev-2)}
+.search-clear.visible{display:flex}
+.search-spin{display:none;width:14px;height:14px;border:2px solid var(--border-strong);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;
+  margin-right:6px}
+.search-spin.visible{display:block}
+
+.suggestions{
+  margin-top:6px;background:rgba(17,22,30,.95);backdrop-filter:blur(14px) saturate(140%);
+  border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;max-height:360px;overflow-y:auto;
+  display:none
+}
+.suggestions.open{display:block}
+.sug{
+  padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--border);
+  transition:background .12s
+}
+.sug:last-child{border-bottom:none}
+.sug:hover,.sug.active{background:var(--bg-elev-2)}
+.sug-main{font-size:13px;color:var(--fg);line-height:1.3;letter-spacing:-.005em}
+.sug-ctx{font-size:11.5px;color:var(--fg-dim);margin-top:2px}
+.sug-empty{padding:14px;text-align:center;font-size:12px;color:var(--fg-dim)}
+
+/* ---------- Cartão de confirmação (após escolher resultado) ---------- */
+.confirm-card{
+  margin-top:8px;background:rgba(17,22,30,.95);backdrop-filter:blur(14px) saturate(140%);
+  border:1px solid var(--accent);border-radius:var(--radius);
+  box-shadow:0 10px 40px rgba(63,184,175,.18),var(--shadow);
+  padding:14px;display:none;animation:slideDown .25s ease-out
+}
+.confirm-card.open{display:block}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.confirm-head{font-size:10.5px;color:var(--accent);text-transform:uppercase;
+  letter-spacing:.12em;font-weight:600;margin-bottom:6px}
+.confirm-addr{font-size:13.5px;color:var(--fg);line-height:1.35;letter-spacing:-.005em;
+  font-weight:500;margin-bottom:4px}
+.confirm-coord{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--fg-faint)}
+.confirm-chips{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0 12px}
+.chip{
+  font-size:10.5px;padding:3px 9px;border-radius:99px;font-weight:500;
+  letter-spacing:.02em;border:1px solid color-mix(in srgb,var(--c) 40%,transparent);
+  color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent)
+}
+.chip.out{--c:var(--fg-faint);color:var(--fg-dim)}
+.confirm-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btn{
+  font-family:inherit;font-size:12.5px;font-weight:500;padding:9px 12px;
+  border-radius:7px;border:1px solid var(--border);background:var(--bg-elev-2);
+  color:var(--fg);cursor:pointer;transition:all .15s;letter-spacing:-.005em
+}
+.btn:hover{border-color:var(--border-strong)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#0a1a18;font-weight:600}
+.btn-primary:hover{filter:brightness(1.1)}
+
+/* ---------- Pin de prévia (pulsante) ---------- */
+.preview-pin{
+  width:18px;height:18px;background:var(--accent);border:3px solid #0a1a18;
+  border-radius:50%;box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 50%,transparent);
+  animation:pulse 1.6s infinite
+}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}
+  70%{box-shadow:0 0 0 16px transparent}
+  100%{box-shadow:0 0 0 0 transparent}
+}
+/* Pin confirmado */
+.pin{
+  width:14px;height:14px;background:#fff;border:3px solid var(--fg);
+  border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.5);transition:transform .15s
+}
+.pin:hover{transform:scale(1.25)}
+.pin.highlight{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 35%,transparent)}
+
+/* ---------- Lista de pins confirmados ---------- */
+.pin-list{display:flex;flex-direction:column;gap:6px}
+.pin-row{
+  display:flex;align-items:center;gap:8px;padding:9px 10px;
+  background:var(--bg-elev-2);border:1px solid var(--border);border-radius:7px;
+  cursor:pointer;transition:all .15s
+}
+.pin-row:hover{border-color:var(--border-strong);transform:translateX(2px)}
+.pin-idx{
+  font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;
+  color:var(--fg-dim);min-width:22px;text-align:center;
+  background:var(--bg-elev);padding:2px 0;border-radius:4px
+}
+.pin-info{flex:1;min-width:0}
+.pin-addr{font-size:12px;color:var(--fg);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;letter-spacing:-.005em}
+.pin-tags{display:flex;gap:3px;margin-top:3px}
+.pin-tag{width:7px;height:7px;border-radius:50%}
+.pin-tag.out{background:var(--fg-faint);opacity:.5}
+.pin-del{
+  width:24px;height:24px;border:none;background:transparent;color:var(--fg-faint);
+  cursor:pointer;border-radius:5px;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;flex-shrink:0
+}
+.pin-del:hover{color:#ff6b6b;background:rgba(255,107,107,.1)}
+.pin-empty{font-size:12px;color:var(--fg-dim);text-align:center;padding:18px 8px;
+  border:1px dashed var(--border);border-radius:7px;line-height:1.4}
+
+/* ---------- Estatísticas de validação (barras) ---------- */
+.val-summary{font-size:11.5px;color:var(--fg-dim);margin-bottom:10px;line-height:1.4}
+.val-summary b{color:var(--fg);font-family:"Bricolage Grotesque",serif;font-size:14px;font-weight:600}
+.val-bars{display:flex;flex-direction:column;gap:8px}
+.val-bar{font-size:11.5px}
+.val-bar-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;gap:6px}
+.val-bar-name{color:var(--fg);letter-spacing:-.005em}
+.val-bar-num{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--fg-dim)}
+.val-bar-num b{color:var(--c);font-weight:600;margin-right:2px}
+.val-bar-track{height:5px;background:var(--bg-elev);border-radius:3px;overflow:hidden}
+.val-bar-fill{height:100%;background:var(--c);border-radius:3px;
+  transition:width .35s cubic-bezier(.4,0,.2,1)}
+.val-note{font-size:10.5px;color:var(--fg-faint);margin-top:10px;line-height:1.4;font-style:italic}
+
+/* Ações no cabeçalho de seção (export/import) */
+.section h2{position:relative}
+.h2-actions{
+  float:right;display:flex;align-items:center;gap:4px;
+  font-weight:400;text-transform:none;letter-spacing:0
+}
+.h2-btn{
+  width:24px;height:24px;border:1px solid var(--border);background:var(--bg-elev-2);
+  color:var(--fg-dim);border-radius:5px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;padding:0
+}
+.h2-btn:hover{color:var(--accent);border-color:var(--accent)}
+.h2-btn:disabled{opacity:.4;cursor:not-allowed}
+.h2-btn:disabled:hover{color:var(--fg-dim);border-color:var(--border)}
+.h2-count{
+  font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--fg-dim);
+  margin-left:6px;padding-left:8px;border-left:1px solid var(--border)
+}
+
+/* Toast de feedback */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:rgba(17,22,30,.95);backdrop-filter:blur(10px);
+  border:1px solid var(--border);border-radius:8px;padding:11px 18px;
+  font-size:13px;color:var(--fg);box-shadow:var(--shadow);z-index:2000;
+  opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
+  display:flex;align-items:center;gap:10px
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:var(--accent)}
+.toast.success svg{color:var(--accent)}
+.toast.error{border-color:#e63946}
+.toast.error svg{color:#e63946}
+
+/* ---------- Zoom Leaflet ---------- */
+.leaflet-bar{border:1px solid var(--border)!important;box-shadow:var(--shadow)!important;
+  background:rgba(17,22,30,.85)!important;backdrop-filter:blur(10px)}
+.leaflet-bar a{background:transparent!important;color:var(--fg)!important;border-color:var(--border)!important}
+.leaflet-bar a:hover{background:var(--bg-elev-2)!important}
+
+@media (max-width:720px){
+  .panel{width:calc(100% - 32px);max-height:60vh;transition:transform .3s}
+  .panel.hidden{transform:translateX(calc(-100% - 32px))}
+  .panel-toggle{display:flex}
+}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Busca + cartão de confirmação (flutuante) -->
+<div class="search-wrap">
+  <div class="search-box">
+    <svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+    </svg>
+    <input id="searchInput" type="text" placeholder="Buscar endereço (rua, número, bairro)…" autocomplete="off" spellcheck="false">
+    <div class="search-spin" id="searchSpin"></div>
+    <button class="search-clear" id="searchClear" aria-label="Limpar">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="suggestions" id="suggestions"></div>
+  <div class="confirm-card" id="confirmCard">
+    <div class="confirm-head">Endereço encontrado</div>
+    <div class="confirm-addr" id="confirmAddr"></div>
+    <div class="confirm-coord" id="confirmCoord"></div>
+    <div class="confirm-chips" id="confirmChips"></div>
+    <div class="confirm-btns">
+      <button class="btn" id="btnDescartar">Limpar</button>
+      <button class="btn btn-primary" id="btnFixar">Fixar pin</button>
+    </div>
+  </div>
+</div>
+
+<button class="panel-toggle" id="panelToggle" aria-label="Alternar painel">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+</button>
+
+<aside class="panel" id="panel">
+  <header>
+    <h1>VCA <span>·</span> Painel de Riscos</h1>
+    <div class="sub">Vitória da Conquista · BA</div>
+  </header>
+
+  <div class="scroll">
+
+    <section class="section">
+      <h2>Resumo</h2>
+      <div class="hero">
+        <div class="hero-num" id="totalImv">—</div>
+        <div class="hero-lbl">imóveis monitorados</div>
+        <div class="hero-foot">
+          <span id="emRisco">—</span> em pelo menos uma camada de risco
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Camadas de risco</h2>
+      <div id="layers"></div>
+    </section>
+
+    <section class="section" id="valSection" style="display:none">
+      <h2>Validação <span style="float:right;font-weight:400;color:var(--fg-faint);text-transform:none;letter-spacing:0">de áreas técnicas</span></h2>
+      <div class="val-summary"><b id="valTotal">0</b> pin<span id="valS">s</span> confirmado<span id="valS2">s</span></div>
+      <div class="val-bars" id="valBars"></div>
+      <div class="val-note">% calculados sobre o total de pins. Um pin pode tocar mais de uma camada.</div>
+    </section>
+
+    <section class="section">
+      <h2>
+        Pontos validados
+        <span class="h2-actions">
+          <button class="h2-btn" id="btnExport" title="Exportar JSON" aria-label="Exportar JSON">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+          <button class="h2-btn" id="btnImport" title="Importar JSON" aria-label="Importar JSON">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </button>
+          <span class="h2-count" id="pinCount">0</span>
+        </span>
+      </h2>
+      <input type="file" id="fileImport" accept="application/json,.json" style="display:none">
+      <div id="pinList"></div>
+    </section>
+
+    <section class="section">
+      <h2>Mapa-base</h2>
+      <div class="bases">
+        <button class="base active" data-base="dark">Escuro</button>
+        <button class="base" data-base="light">Claro</button>
+        <button class="base" data-base="sat">Satélite</button>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="foot">
+    <span>lat,lng</span>
+    <span class="coord" id="coord">—</span>
+  </div>
+</aside>
+
+<div class="toast" id="toast">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="toastIcon">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+  <span id="toastText"></span>
+</div>
+
+<div class="loader" id="loader"><div class="spin"></div><span id="loaderText">Carregando camadas…</span></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script>
+// ---------------------------------------------------------------------------
+// Dados injetados pelo Python
+// ---------------------------------------------------------------------------
+const LAYERS = [{"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/Risco_criadouros.geojson", "nome": "Risco de Criadouros", "id": "criadouros", "cor": "#ffb74d", "opacidade": 0.55, "descricao": "Áreas com maior incidência de focos do vetor.", "n": 20763}, {"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/risco_incubacao.geojson", "nome": "Risco de Incubação", "id": "incubacao", "cor": "#c77dff", "opacidade": 0.6, "descricao": "Locais sob janela de incubação ativa.", "n": 33149}, {"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/Risco_transmissao.geojson", "nome": "Risco de Transmissão", "id": "transmissao", "cor": "#e63946", "opacidade": 0.7, "descricao": "Polígonos com transmissão recente confirmada.", "n": 52832}];
+const CENTER = [-14.86, -40.82];
+const ZOOM   = 13;
+const TOTAL  = 186000;
+
+// formatadores PT-BR
+const fmtN = (n) => n.toLocaleString('pt-BR');
+const fmtP = (n) => {
+  const v = (n / TOTAL) * 100;
+  if (v === 0) return '0%';
+  if (v < 0.1) return '<0,1%';
+  return v.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%';
+};
+
+// ---------------------------------------------------------------------------
+// Mapa
+// ---------------------------------------------------------------------------
+const canvasRenderer = L.canvas({ padding: 0.5 });
+
+const bases = {
+  dark:  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+          {maxZoom:20, attribution:'© OpenStreetMap · © CARTO'}),
+  light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+          {maxZoom:20, attribution:'© OpenStreetMap · © CARTO'}),
+  sat:   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          {maxZoom:19, attribution:'© Esri · World Imagery'}),
+};
+
+const map = L.map('map', {
+  center: CENTER, zoom: ZOOM,
+  zoomControl: true, attributionControl: true,
+  preferCanvas: true, renderer: canvasRenderer,
+  worldCopyJump: false,
+});
+bases.dark.addTo(map);
+let baseAtual = 'dark';
+
+// Token MapBox (injetado pelo Python)
+const MAPBOX_TOKEN = "pk.eyJ1IjoiZGF2aWx1Y2EiLCJhIjoiY2s2YW9qc3phMGZ0YTNncnowdXBhZnE2ciJ9.eYXvXXtrHrMGuD8hWIpskQ";
+
+// ---------------------------------------------------------------------------
+// Painel: monta os cards de camada e os controles
+// ---------------------------------------------------------------------------
+const layerObjs = {};   // id -> {layer, config, ...}
+const layersWrap = document.getElementById('layers');
+
+function makeLayerCard(cfg) {
+  const card = document.createElement('div');
+  card.className = 'layer';
+  card.style.setProperty('--c', cfg.cor);
+  card.innerHTML = `
+    <div class="layer-head">
+      <span class="dot" style="background:${cfg.cor}"></span>
+      <span class="layer-name">${cfg.nome}</span>
+      <label class="toggle">
+        <input type="checkbox" checked data-id="${cfg.id}">
+        <span class="track"></span><span class="thumb"></span>
+      </label>
+    </div>
+    <div class="metrics">
+      <span class="metric-n">${fmtN(cfg.n)}</span>
+      <span class="metric-sep">·</span>
+      <span class="metric-p">${fmtP(cfg.n)}</span>
+      <span class="metric-lbl">imóveis</span>
+    </div>
+    <div class="desc">${cfg.descricao}</div>
+    <div class="slider-row">
+      <label>Opacidade</label>
+      <input class="slider" type="range" min="0" max="100" value="${Math.round(cfg.opacidade*100)}" data-id="${cfg.id}">
+      <span class="val" id="val-${cfg.id}">${Math.round(cfg.opacidade*100)}%</span>
+    </div>`;
+  layersWrap.appendChild(card);
+  return card;
+}
+
+// ---------------------------------------------------------------------------
+// Renderiza uma camada (assíncrono, lote a lote)
+// ---------------------------------------------------------------------------
+async function buildLayer(cfg) {
+  const styleFn = () => ({
+    color: cfg.cor, weight: 1,
+    fillColor: cfg.cor, fillOpacity: cfg.opacidade,
+  });
+
+  const onEach = (feature, layer) => {
+    layer.on('click', () => {
+      const props = feature.properties || {};
+      const rows = Object.entries(props)
+        .filter(([,v]) => v !== null && v !== undefined && v !== '')
+        .slice(0, 12)
+        .map(([k,v]) => `<tr><td>${k}</td><td>${typeof v === 'number' ? v.toLocaleString('pt-BR') : v}</td></tr>`)
+        .join('');
+      const html = `<div class="popup" style="--c:${cfg.cor}">
+        <div class="ptitle">${cfg.nome}</div>
+        ${rows ? `<table>${rows}</table>` : '<div style="color:var(--fg-dim);font-size:11.5px">Sem atributos</div>'}
+      </div>`;
+      L.popup({maxWidth:280, closeButton:true}).setLatLng(layer.getBounds().getCenter()).setContent(html).openOn(map);
+    });
+  };
+
+  const resp = await fetch(cfg.url);
+  const geojson = await resp.json();
+  cfg.data = geojson;   // guarda para uso posterior (ex.: point-in-polygon)
+  return L.geoJSON(geojson, {style: styleFn, onEachFeature: onEach, renderer: canvasRenderer});
+}
+
+// ---------------------------------------------------------------------------
+// Pipeline assíncrono: mostra UI, depois adiciona camadas uma a uma
+// ---------------------------------------------------------------------------
+let totalFeatures = 0;
+
+async function init() {
+  // popula painel imediatamente
+  LAYERS.forEach(cfg => { makeLayerCard(cfg); totalFeatures += cfg.n; });
+  document.getElementById('totalImv').textContent = fmtN(TOTAL);
+  document.getElementById('emRisco').textContent  = `${fmtN(totalFeatures)} · ${fmtP(totalFeatures)}`;
+
+  // adiciona camadas progressivamente
+  const allBounds = [];
+  for (const cfg of LAYERS) {
+    document.getElementById('loaderText').textContent = `Carregando ${cfg.nome.toLowerCase()}…`;
+    await new Promise(r => requestAnimationFrame(r));
+    const lyr = await buildLayer(cfg);
+    lyr.addTo(map);
+    layerObjs[cfg.id] = { layer: lyr, cfg };
+    try { const b = lyr.getBounds(); if (b.isValid()) allBounds.push(b); } catch {}
+  }
+
+  if (allBounds.length) {
+    const merged = allBounds.reduce((a,b) => a.extend(b), L.latLngBounds(allBounds[0].getSouthWest(), allBounds[0].getNorthEast()));
+    map.fitBounds(merged, {padding:[40,40]});
+  }
+
+  document.getElementById('loaderText').textContent = `Pronto · ${fmtN(totalFeatures)} imóveis em risco`;
+  setTimeout(() => document.getElementById('loader').classList.add('done'), 1200);
+}
+
+// ---------------------------------------------------------------------------
+// Interações do painel
+// ---------------------------------------------------------------------------
+layersWrap.addEventListener('change', e => {
+  const id = e.target.dataset.id;
+  if (!id || !layerObjs[id]) return;
+  const obj = layerObjs[id];
+  const card = e.target.closest('.layer');
+
+  if (e.target.type === 'checkbox') {
+    if (e.target.checked) { obj.layer.addTo(map); card.classList.remove('off'); }
+    else                  { map.removeLayer(obj.layer); card.classList.add('off'); }
+  }
+});
+
+layersWrap.addEventListener('input', e => {
+  if (e.target.type !== 'range') return;
+  const id = e.target.dataset.id;
+  const obj = layerObjs[id]; if (!obj) return;
+  const v = e.target.value / 100;
+  obj.cfg.opacidade = v;
+  obj.layer.setStyle({fillOpacity: v});
+  document.getElementById('val-' + id).textContent = e.target.value + '%';
+});
+
+// Mapa-base
+document.querySelectorAll('.base').forEach(btn => btn.addEventListener('click', () => {
+  const novo = btn.dataset.base; if (novo === baseAtual) return;
+  map.removeLayer(bases[baseAtual]); bases[novo].addTo(map); baseAtual = novo;
+  document.querySelectorAll('.base').forEach(b => b.classList.toggle('active', b === btn));
+}));
+
+// Coordenadas
+const coord = document.getElementById('coord');
+map.on('mousemove', e => {
+  coord.textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+});
+
+// Toggle painel mobile
+document.getElementById('panelToggle').addEventListener('click', () => {
+  document.getElementById('panel').classList.toggle('hidden');
+});
+
+// ===========================================================================
+// MÓDULO: BUSCA + VALIDAÇÃO DE ÁREAS
+// ===========================================================================
+
+// --- Point-in-polygon (ray casting) com filtro de bbox ----------------------
+function pointInRing(p, ring) {
+  let inside = false;
+  for (let i=0, j=ring.length-1; i<ring.length; j=i++) {
+    const xi=ring[i][0], yi=ring[i][1], xj=ring[j][0], yj=ring[j][1];
+    const inter = ((yi > p[1]) !== (yj > p[1])) &&
+                  (p[0] < (xj-xi) * (p[1]-yi) / (yj-yi) + xi);
+    if (inter) inside = !inside;
+  }
+  return inside;
+}
+function pointInPoly(p, rings) {
+  if (!pointInRing(p, rings[0])) return false;
+  for (let i=1; i<rings.length; i++) if (pointInRing(p, rings[i])) return false;
+  return true;
+}
+function bboxOf(coords) {
+  let mnx=Infinity,mny=Infinity,mxx=-Infinity,mxy=-Infinity;
+  (function walk(a){
+    if (typeof a[0]==='number'){
+      if(a[0]<mnx)mnx=a[0]; if(a[1]<mny)mny=a[1];
+      if(a[0]>mxx)mxx=a[0]; if(a[1]>mxy)mxy=a[1];
+    } else a.forEach(walk);
+  })(coords);
+  return [mnx,mny,mxx,mxy];
+}
+
+// --- Conversão graus ↔ metros (equirretangular local, suficiente em <1km) --
+const M_PER_DEG_LAT = 111320;
+const M_PER_DEG_LNG = 111320 * Math.cos(CENTER[0] * Math.PI/180);
+// Tolerância: pin conta como "dentro" se estiver a até R_METERS de algum imóvel da camada.
+// Cobre a largura típica de via + recuo de calçada, evitando o "buraco" geométrico
+// entre o ponto da rua devolvido pelo geocoder e o polígono do lote.
+const R_METERS = 30;
+const R_LAT_DEG = R_METERS / M_PER_DEG_LAT;
+const R_LNG_DEG = R_METERS / M_PER_DEG_LNG;
+
+// Distância (em metros) do ponto p ao segmento a–b. Coordenadas em [lng,lat].
+function distPtSegM(p, a, b) {
+  const ax = (a[0]-p[0])*M_PER_DEG_LNG, ay = (a[1]-p[1])*M_PER_DEG_LAT;
+  const bx = (b[0]-p[0])*M_PER_DEG_LNG, by = (b[1]-p[1])*M_PER_DEG_LAT;
+  const dx = bx-ax, dy = by-ay;
+  const len2 = dx*dx + dy*dy;
+  if (len2 === 0) return Math.hypot(ax, ay);
+  let t = -(ax*dx + ay*dy) / len2;
+  if (t < 0) t = 0; else if (t > 1) t = 1;
+  return Math.hypot(ax + t*dx, ay + t*dy);
+}
+function distPtRingM(p, ring) {
+  let min = Infinity;
+  for (let i=0; i<ring.length-1; i++) {
+    const d = distPtSegM(p, ring[i], ring[i+1]);
+    if (d < min) { min = d; if (min === 0) break; }
+  }
+  return min;
+}
+function distPtPolyM(p, rings) {
+  if (pointInPoly(p, rings)) return 0;
+  return distPtRingM(p, rings[0]);   // distância ao anel externo
+}
+
+// Pré-computa bboxes por feature de cada camada (acelera muito)
+const spatialIndex = {};
+function buildIndex() {
+  for (const cfg of LAYERS) {
+    const feats = (cfg.data && cfg.data.features) || [];
+    spatialIndex[cfg.id] = feats.map(f => ({
+      bbox: bboxOf(f.geometry.coordinates),
+      geom: f.geometry,
+    }));
+  }
+}
+
+// Retorna Set de ids de camadas cujo imóvel mais próximo está a ≤ R_METERS do ponto.
+function layersAt(lng, lat) {
+  const hit = new Set();
+  const p = [lng, lat];
+  for (const cfg of LAYERS) {
+    const idx = spatialIndex[cfg.id] || [];
+    for (const it of idx) {
+      const b = it.bbox;
+      // bbox expandido por R (em graus) — filtra rapidamente a maioria das features
+      if (lng < b[0]-R_LNG_DEG || lng > b[2]+R_LNG_DEG ||
+          lat < b[1]-R_LAT_DEG || lat > b[3]+R_LAT_DEG) continue;
+      const g = it.geom;
+      let d = Infinity;
+      if (g.type === 'Polygon') {
+        d = distPtPolyM(p, g.coordinates);
+      } else if (g.type === 'MultiPolygon') {
+        for (const poly of g.coordinates) {
+          const dd = distPtPolyM(p, poly);
+          if (dd < d) d = dd;
+          if (d === 0) break;
+        }
+      } else continue;
+      if (d <= R_METERS) { hit.add(cfg.id); break; }
+    }
+  }
+  return hit;
+}
+
+const layerById = Object.fromEntries(LAYERS.map(c => [c.id, c]));
+
+// --- Estado ----------------------------------------------------------------
+const S = {
+  preview: null,            // {lat,lng,address,marker}
+  pins: new Map(),          // id -> {id,lat,lng,address,marker,layers:Set<id>}
+  nextId: 1,
+};
+const STORAGE_KEY = 'vca_pins_v1';
+
+// --- Ícones ----------------------------------------------------------------
+const previewIcon = L.divIcon({className:'',html:'<div class="preview-pin"></div>',iconSize:[18,18],iconAnchor:[9,9]});
+function makePinIcon(highlight=false){
+  return L.divIcon({className:'',html:`<div class="pin${highlight?' highlight':''}"></div>`,iconSize:[14,14],iconAnchor:[7,7]});
+}
+
+// --- DOM refs --------------------------------------------------------------
+const $input  = document.getElementById('searchInput');
+const $clear  = document.getElementById('searchClear');
+const $spin   = document.getElementById('searchSpin');
+const $sugs   = document.getElementById('suggestions');
+const $card   = document.getElementById('confirmCard');
+const $cAddr  = document.getElementById('confirmAddr');
+const $cCoord = document.getElementById('confirmCoord');
+const $cChips = document.getElementById('confirmChips');
+const $list   = document.getElementById('pinList');
+const $valSec = document.getElementById('valSection');
+const $valBars= document.getElementById('valBars');
+
+// --- Geocoding (MapBox v5) -------------------------------------------------
+let lastQuery = '';
+let abortCtrl = null;
+
+async function geocode(q) {
+  if (abortCtrl) abortCtrl.abort();
+  abortCtrl = new AbortController();
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json`
+            + `?access_token=${MAPBOX_TOKEN}`
+            + `&country=br&language=pt&autocomplete=true&limit=8`
+            + `&proximity=${CENTER[1]},${CENTER[0]}`
+            + `&bbox=-41.2,-15.4,-40.3,-14.4`     // viés VC, mas types address volta resultados próximos
+            + `&types=address,place,locality,neighborhood,poi`;
+  const r = await fetch(url, {signal: abortCtrl.signal});
+  if (!r.ok) throw new Error('geocode falhou');
+  const j = await r.json();
+  return j.features || [];
+}
+
+function showSpin(v){ $spin.classList.toggle('visible', v); }
+function showSugs(v){ $sugs.classList.toggle('open', v); }
+function showClear(v){ $clear.classList.toggle('visible', v); }
+
+let debounceT = null;
+$input.addEventListener('input', () => {
+  const q = $input.value.trim();
+  showClear(q.length > 0);
+  clearTimeout(debounceT);
+  if (q.length < 3) { showSugs(false); return; }
+  showSpin(true);
+  debounceT = setTimeout(async () => {
+    try {
+      lastQuery = q;
+      const feats = await geocode(q);
+      if (lastQuery !== q) return;  // resultado obsoleto
+      renderSuggestions(feats);
+    } catch(e) {
+      if (e.name !== 'AbortError') console.warn(e);
+    } finally {
+      showSpin(false);
+    }
+  }, 280);
+});
+
+$clear.addEventListener('click', () => {
+  $input.value = ''; showClear(false); showSugs(false); $input.focus();
+});
+
+function renderSuggestions(feats) {
+  if (!feats.length) {
+    $sugs.innerHTML = '<div class="sug-empty">Nenhum endereço encontrado.</div>';
+    showSugs(true); return;
+  }
+  $sugs.innerHTML = feats.map((f,i) => {
+    const main = f.text + (f.address ? ', ' + f.address : '');
+    const ctx = (f.place_name || '').replace(main + ', ', '').replace(main, '');
+    return `<div class="sug" data-i="${i}">
+      <div class="sug-main">${escHtml(main)}</div>
+      <div class="sug-ctx">${escHtml(ctx)}</div>
+    </div>`;
+  }).join('');
+  showSugs(true);
+  $sugs.querySelectorAll('.sug').forEach(el => {
+    el.addEventListener('click', () => selectFeature(feats[parseInt(el.dataset.i,10)]));
+  });
+}
+
+function escHtml(s){
+  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// --- Prévia + confirmação --------------------------------------------------
+function clearPreview() {
+  if (S.preview && S.preview.marker) map.removeLayer(S.preview.marker);
+  S.preview = null;
+  $card.classList.remove('open');
+}
+
+function selectFeature(f) {
+  showSugs(false);
+  $input.value = f.place_name || f.text;
+  showClear(true);
+  const [lng, lat] = f.center;
+  clearPreview();
+  const m = L.marker([lat, lng], {icon: previewIcon, zIndexOffset: 1000}).addTo(map);
+  S.preview = {lat, lng, address: f.place_name || f.text, marker: m};
+  map.flyTo([lat, lng], Math.max(map.getZoom(), 17), {duration: .8});
+
+  // calcula camadas atingidas
+  const hit = layersAt(lng, lat);
+  $cAddr.textContent = S.preview.address;
+  $cCoord.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  $cChips.innerHTML = renderChips(hit);
+  $card.classList.add('open');
+}
+
+function renderChips(hit) {
+  if (!hit.size) return `<span class="chip out">Fora das áreas principais</span>`;
+  return [...hit].map(id => {
+    const cfg = layerById[id];
+    return `<span class="chip" style="--c:${cfg.cor}">${cfg.nome}</span>`;
+  }).join('');
+}
+
+document.getElementById('btnDescartar').addEventListener('click', clearPreview);
+document.getElementById('btnFixar').addEventListener('click', () => {
+  if (!S.preview) return;
+  const hit = layersAt(S.preview.lng, S.preview.lat);
+  addPin({
+    id: S.nextId++,
+    lat: S.preview.lat, lng: S.preview.lng,
+    address: S.preview.address,
+    layers: [...hit],
+  });
+  clearPreview();
+  $input.value = ''; showClear(false);
+  persist(); renderList(); renderValidation();
+});
+
+// --- Pins confirmados ------------------------------------------------------
+function addPin(rec, silent=false) {
+  if (rec.id >= S.nextId) S.nextId = rec.id + 1;
+  const marker = L.marker([rec.lat, rec.lng], {icon: makePinIcon(false), zIndexOffset: 800}).addTo(map);
+  const pin = {...rec, layers: new Set(rec.layers), marker};
+  marker.bindTooltip(`<b>#${rec.id}</b> ${escHtml(rec.address)}`,{direction:'top',offset:[0,-8],className:'pin-tooltip'});
+  marker.on('click', () => zoomToPin(rec.id));
+  S.pins.set(rec.id, pin);
+}
+
+function zoomToPin(id) {
+  const p = S.pins.get(id); if (!p) return;
+  map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 17), {duration:.6});
+  p.marker.setIcon(makePinIcon(true));
+  setTimeout(() => p.marker.setIcon(makePinIcon(false)), 1800);
+}
+
+function removePin(id) {
+  const p = S.pins.get(id); if (!p) return;
+  map.removeLayer(p.marker);
+  S.pins.delete(id);
+  persist(); renderList(); renderValidation();
+}
+
+function renderList() {
+  const pins = [...S.pins.values()];
+  document.getElementById('pinCount').textContent = pins.length;
+  document.getElementById('btnExport').disabled = pins.length === 0;
+  if (!pins.length) {
+    $list.innerHTML = `<div class="pin-empty">Nenhum endereço fixado ainda.<br>Busque e confirme para começar a validar.</div>`;
+    return;
+  }
+  $list.className = 'pin-list';
+  $list.innerHTML = pins.map(p => {
+    const tags = p.layers.size
+      ? [...p.layers].map(id => `<span class="pin-tag" style="background:${layerById[id].cor}"></span>`).join('')
+      : '<span class="pin-tag out"></span>';
+    return `<div class="pin-row" data-id="${p.id}">
+      <div class="pin-idx">${p.id}</div>
+      <div class="pin-info">
+        <div class="pin-addr">${escHtml(p.address)}</div>
+        <div class="pin-tags">${tags}</div>
+      </div>
+      <button class="pin-del" data-id="${p.id}" aria-label="Remover">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+        </svg>
+      </button>
+    </div>`;
+  }).join('');
+  $list.querySelectorAll('.pin-row').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.closest('.pin-del')) return;
+      zoomToPin(parseInt(el.dataset.id,10));
+    });
+  });
+  $list.querySelectorAll('.pin-del').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      removePin(parseInt(el.dataset.id,10));
+    });
+  });
+}
+
+function renderValidation() {
+  const pins = [...S.pins.values()];
+  $valSec.style.display = pins.length ? 'block' : 'none';
+  if (!pins.length) return;
+  const N = pins.length;
+  document.getElementById('valTotal').textContent = N;
+  document.getElementById('valS').textContent  = N === 1 ? '' : 's';
+  document.getElementById('valS2').textContent = N === 1 ? '' : 's';
+
+  const counts = {};
+  LAYERS.forEach(c => counts[c.id] = 0);
+  let fora = 0;
+  for (const p of pins) {
+    if (!p.layers.size) fora++;
+    else p.layers.forEach(id => counts[id]++);
+  }
+  const fmtPct = n => {
+    const v = (n/N)*100;
+    return v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:1}) + '%';
+  };
+  const bar = (name,cor,n) => `
+    <div class="val-bar" style="--c:${cor}">
+      <div class="val-bar-head">
+        <span class="val-bar-name">${name}</span>
+        <span class="val-bar-num"><b>${n}</b>/${N} · ${fmtPct(n)}</span>
+      </div>
+      <div class="val-bar-track"><div class="val-bar-fill" style="width:${(n/N)*100}%"></div></div>
+    </div>`;
+  const bars = LAYERS.map(c => bar(c.nome, c.cor, counts[c.id])).join('')
+             + bar('Fora das áreas principais', '#5a6470', fora);
+  $valBars.innerHTML = bars;
+}
+
+// --- Persistência ----------------------------------------------------------
+function persist() {
+  try {
+    const arr = [...S.pins.values()].map(p => ({
+      id: p.id, lat: p.lat, lng: p.lng, address: p.address, layers: [...p.layers]
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  } catch(e) {}
+}
+function restore() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const arr = JSON.parse(raw);
+    arr.forEach(r => addPin(r, true));
+  } catch(e) {}
+}
+
+// --- Toast (feedback efêmero) ----------------------------------------------
+const $toast = document.getElementById('toast');
+const $toastText = document.getElementById('toastText');
+const $toastIcon = document.getElementById('toastIcon');
+const ICON_OK = '<polyline points="20 6 9 17 4 12"/>';
+const ICON_ERR = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+let toastT;
+function toast(msg, kind='success') {
+  $toastText.textContent = msg;
+  $toastIcon.innerHTML = kind === 'success' ? ICON_OK : ICON_ERR;
+  $toast.classList.remove('success','error');
+  $toast.classList.add(kind, 'show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => $toast.classList.remove('show'), 2800);
+}
+
+// --- Export / Import JSON --------------------------------------------------
+function exportJSON() {
+  const pins = [...S.pins.values()];
+  if (!pins.length) { toast('Nada para exportar.', 'error'); return; }
+  const payload = {
+    formato: 'vca-pins',
+    versao: 1,
+    exportado_em: new Date().toISOString(),
+    municipio: 'Vitória da Conquista · BA',
+    total_imoveis_base: TOTAL,
+    pins: pins.map(p => ({
+      id: p.id, lat: p.lat, lng: p.lng,
+      endereco: p.address, camadas: [...p.layers]
+    })),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const today = new Date().toISOString().slice(0,10);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `vca_pins_${today}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast(`${pins.length} pin${pins.length===1?'':'s'} exportado${pins.length===1?'':'s'}.`);
+}
+
+function importJSON(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    let payload;
+    try { payload = JSON.parse(reader.result); }
+    catch(e) { toast('Arquivo inválido (não é JSON).', 'error'); return; }
+
+    // Aceita tanto o formato exportado (com .pins) quanto um array direto
+    const arr = Array.isArray(payload) ? payload : (payload.pins || []);
+    if (!Array.isArray(arr) || !arr.length) {
+      toast('Arquivo sem pins válidos.', 'error'); return;
+    }
+
+    // Evita duplicar: chave = lat,lng arredondado (≈1m de tolerância)
+    const seen = new Set();
+    for (const p of S.pins.values()) {
+      seen.add(`${p.lat.toFixed(5)},${p.lng.toFixed(5)}`);
+    }
+
+    let adicionados = 0, ignorados = 0, invalidos = 0;
+    for (const r of arr) {
+      const lat = +r.lat, lng = +r.lng;
+      const address = r.endereco || r.address || '';
+      if (!isFinite(lat) || !isFinite(lng)) { invalidos++; continue; }
+      const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+      if (seen.has(key)) { ignorados++; continue; }
+      seen.add(key);
+      // Recalcula camadas com o R atual — não confia no arquivo
+      const layers = [...layersAt(lng, lat)];
+      addPin({ id: S.nextId++, lat, lng, address, layers });
+      adicionados++;
+    }
+
+    persist(); renderList(); renderValidation();
+    const partes = [];
+    if (adicionados) partes.push(`${adicionados} adicionado${adicionados===1?'':'s'}`);
+    if (ignorados) partes.push(`${ignorados} já existente${ignorados===1?'':'s'}`);
+    if (invalidos) partes.push(`${invalidos} inválido${invalidos===1?'':'s'}`);
+    toast(partes.join(' · ') || 'Nada importado.', adicionados ? 'success' : 'error');
+  };
+  reader.onerror = () => toast('Erro ao ler o arquivo.', 'error');
+  reader.readAsText(file);
+}
+
+document.getElementById('btnExport').addEventListener('click', exportJSON);
+document.getElementById('btnImport').addEventListener('click', () => {
+  document.getElementById('fileImport').click();
+});
+document.getElementById('fileImport').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  if (f) importJSON(f);
+  e.target.value = '';   // permite reimportar o mesmo arquivo
+});
+
+// --- Fecha sugestões clicando fora -----------------------------------------
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) showSugs(false);
+});
+
+// --- ESC limpa prévia ------------------------------------------------------
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (S.preview) clearPreview();
+    else showSugs(false);
+  }
+});
+
+// ===========================================================================
+// Bootstrap
+// ===========================================================================
+async function bootstrap() {
+  await init();           // renderiza as camadas
+  buildIndex();           // pré-calcula bboxes p/ point-in-polygon
+  restore();              // pins do localStorage
+  renderList();
+  renderValidation();
+}
+
+bootstrap();
+</script>
+</body>
+</html>
