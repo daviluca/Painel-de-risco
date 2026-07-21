@@ -1,0 +1,18 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # Roda todo dia às 09:00 UTC (06:00 horário de Brasília)
+    - cron: '0 9 * * *'
+  workflow_dispatch: {}  # permite rodar manualmente pelo GitHub também
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Acessar bucket do Supabase Storage
+        run: |
+          echo "Pingando o Supabase para manter o projeto ativo..."
+          curl -s -o /dev/null -w "Status: %{http_code}\n" \
+            "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/"
+          echo "Ping concluído em $(date)"
