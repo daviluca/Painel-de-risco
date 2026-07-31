@@ -330,6 +330,36 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
   transition:width .35s cubic-bezier(.4,0,.2,1)}
 .val-note{font-size:10.5px;color:var(--fg-faint);margin-top:10px;line-height:1.4;font-style:italic}
 
+/* ---------- Drop zone CSV de casos ---------- */
+.csv-drop{
+  border:2px dashed var(--border);border-radius:8px;padding:14px 12px;
+  text-align:center;cursor:pointer;transition:all .2s;position:relative;
+  background:var(--bg-elev-2)
+}
+.csv-drop:hover,.csv-drop.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--bg-elev-2))}
+.csv-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.csv-drop-ico{font-size:20px;margin-bottom:4px}
+.csv-drop-txt{font-size:11.5px;color:var(--fg-dim);line-height:1.4}
+.csv-drop-txt b{color:var(--fg);display:block;margin-bottom:2px}
+.csv-result{margin-top:8px;display:none}
+.csv-stat{display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;
+  padding:8px 12px;font-size:12px;margin-bottom:8px}
+.csv-stat-n{font-family:"Bricolage Grotesque",serif;font-size:18px;font-weight:600;color:#ff6b6b}
+.csv-stat-lbl{color:var(--fg-dim);font-size:11px;margin-top:1px}
+.csv-clear{border:none;background:transparent;color:var(--fg-faint);cursor:pointer;
+  font-size:11px;padding:4px 6px;border-radius:4px;transition:all .15s}
+.csv-clear:hover{color:#ff6b6b;background:rgba(255,107,107,.1)}
+.caso-pin{
+  width:10px;height:10px;border-radius:50%;
+  background:#ff6b6b;border:2px solid #fff;
+  box-shadow:0 0 0 2px rgba(255,107,107,.5),0 2px 6px rgba(0,0,0,.5)
+}
+
+/* ── NOVO: barras de risco para o CSV ── */
+.csv-bars{display:flex;flex-direction:column;gap:8px}
+.csv-note{font-size:10.5px;color:var(--fg-faint);margin-top:8px;line-height:1.4;font-style:italic}
+
 /* Ações no cabeçalho de seção (export/import) */
 .section h2{position:relative}
 .h2-actions{
@@ -467,6 +497,40 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
       <div id="pinList"></div>
     </section>
 
+    <!-- ═══════════════════════════════════════════════════════════════
+         SEÇÃO CSV — drop zone + resultado com barras de risco
+         ═══════════════════════════════════════════════════════════════ -->
+    <section class="section">
+      <h2>Casos confirmados (CSV)</h2>
+      <div class="csv-drop" id="csvDrop">
+        <input type="file" id="csvFile" accept=".csv,text/csv">
+        <div class="csv-drop-ico">📂</div>
+        <div class="csv-drop-txt">
+          <b>Arraste um CSV aqui</b>
+          ou clique para selecionar<br>
+          <span style="font-size:10.5px;opacity:.6">colunas: lat, lon (ou latitude/longitude)</span>
+        </div>
+      </div>
+
+      <!-- Resultado: visível após carga do CSV -->
+      <div class="csv-result" id="csvResult">
+
+        <!-- cabeçalho: total + botão limpar -->
+        <div class="csv-stat">
+          <div>
+            <div class="csv-stat-n" id="csvCount">0</div>
+            <div class="csv-stat-lbl">casos plotados no mapa</div>
+          </div>
+          <button class="csv-clear" id="csvClear">✕ Limpar</button>
+        </div>
+
+        <!-- ── NOVO: barras de distribuição por área de risco ── -->
+        <div class="csv-bars" id="csvBars"></div>
+        <div class="csv-note">Um caso pode estar em mais de uma área de risco.</div>
+
+      </div>
+    </section>
+
     <section class="section">
       <h2>Mapa-base</h2>
       <div class="bases">
@@ -500,7 +564,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
 // ---------------------------------------------------------------------------
 // Dados injetados pelo Python
 // ---------------------------------------------------------------------------
-const LAYERS = [{"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/Risco_criadouros.geojson", "nome": "Risco de Criadouros", "id": "criadouros", "cor": "#ffb74d", "opacidade": 0.55, "descricao": "Áreas com maior incidência de focos do vetor.", "n": 20763}, {"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/risco_incubacao.geojson", "nome": "Risco de Incubação", "id": "incubacao", "cor": "#c77dff", "opacidade": 0.6, "descricao": "Locais sob janela de incubação ativa.", "n": 33149}, {"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/Risco_transmissao.geojson", "nome": "Risco de Transmissão", "id": "transmissao", "cor": "#e63946", "opacidade": 0.7, "descricao": "Polígonos com transmissão recente confirmada.", "n": 52832}];
+const LAYERS = [{"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/Risco_criadouros.geojson", "nome": "Risco de Criadouros", "id": "criadouros", "cor": "#ffb74d", "opacidade": 0.55, "descricao": "Áreas com maior incidência de focos do vetor.", "n": 0}, {"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/risco_incubacao.geojson", "nome": "Risco de Incubação", "id": "incubacao", "cor": "#c77dff", "opacidade": 0.6, "descricao": "Locais sob janela de incubação ativa.", "n": 0}, {"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/Risco_transmissao.geojson", "nome": "Risco de Transmissão", "id": "transmissao", "cor": "#e63946", "opacidade": 0.7, "descricao": "Polígonos com transmissão recente confirmada.", "n": 0}];
 const CENTER = [-14.86, -40.82];
 const ZOOM   = 13;
 const TOTAL  = 186000;
@@ -543,7 +607,7 @@ const MAPBOX_TOKEN = "pk.eyJ1IjoiZGF2aWx1Y2EiLCJhIjoiY2s2YW9qc3phMGZ0YTNncnowdXB
 // ---------------------------------------------------------------------------
 // Painel: monta os cards de camada e os controles
 // ---------------------------------------------------------------------------
-const layerObjs = {};   // id -> {layer, config, ...}
+const layerObjs = {};
 const layersWrap = document.getElementById('layers');
 
 function makeLayerCard(cfg) {
@@ -576,7 +640,7 @@ function makeLayerCard(cfg) {
 }
 
 // ---------------------------------------------------------------------------
-// Renderiza uma camada (assíncrono, lote a lote)
+// Renderiza uma camada GeoJSON
 // ---------------------------------------------------------------------------
 async function buildLayer(cfg) {
   const styleFn = () => ({
@@ -602,22 +666,20 @@ async function buildLayer(cfg) {
 
   const resp = await fetch(cfg.url);
   const geojson = await resp.json();
-  cfg.data = geojson;   // guarda para uso posterior (ex.: point-in-polygon)
+  cfg.data = geojson;
   return L.geoJSON(geojson, {style: styleFn, onEachFeature: onEach, renderer: canvasRenderer});
 }
 
 // ---------------------------------------------------------------------------
-// Pipeline assíncrono: mostra UI, depois adiciona camadas uma a uma
+// Pipeline assíncrono
 // ---------------------------------------------------------------------------
 let totalFeatures = 0;
 
 async function init() {
-  // popula painel imediatamente
   LAYERS.forEach(cfg => { makeLayerCard(cfg); totalFeatures += cfg.n; });
   document.getElementById('totalImv').textContent = fmtN(TOTAL);
   document.getElementById('emRisco').textContent  = `${fmtN(totalFeatures)} · ${fmtP(totalFeatures)}`;
 
-  // adiciona camadas progressivamente
   const allBounds = [];
   for (const cfg of LAYERS) {
     document.getElementById('loaderText').textContent = `Carregando ${cfg.nome.toLowerCase()}…`;
@@ -645,7 +707,6 @@ layersWrap.addEventListener('change', e => {
   if (!id || !layerObjs[id]) return;
   const obj = layerObjs[id];
   const card = e.target.closest('.layer');
-
   if (e.target.type === 'checkbox') {
     if (e.target.checked) { obj.layer.addTo(map); card.classList.remove('off'); }
     else                  { map.removeLayer(obj.layer); card.classList.add('off'); }
@@ -662,20 +723,17 @@ layersWrap.addEventListener('input', e => {
   document.getElementById('val-' + id).textContent = e.target.value + '%';
 });
 
-// Mapa-base
 document.querySelectorAll('.base').forEach(btn => btn.addEventListener('click', () => {
   const novo = btn.dataset.base; if (novo === baseAtual) return;
   map.removeLayer(bases[baseAtual]); bases[novo].addTo(map); baseAtual = novo;
   document.querySelectorAll('.base').forEach(b => b.classList.toggle('active', b === btn));
 }));
 
-// Coordenadas
 const coord = document.getElementById('coord');
 map.on('mousemove', e => {
   coord.textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
 });
 
-// Toggle painel mobile
 document.getElementById('panelToggle').addEventListener('click', () => {
   document.getElementById('panel').classList.toggle('hidden');
 });
@@ -684,7 +742,7 @@ document.getElementById('panelToggle').addEventListener('click', () => {
 // MÓDULO: BUSCA + VALIDAÇÃO DE ÁREAS
 // ===========================================================================
 
-// --- Point-in-polygon (ray casting) com filtro de bbox ----------------------
+// --- Point-in-polygon (ray casting) ----------------------------------------
 function pointInRing(p, ring) {
   let inside = false;
   for (let i=0, j=ring.length-1; i<ring.length; j=i++) {
@@ -711,17 +769,12 @@ function bboxOf(coords) {
   return [mnx,mny,mxx,mxy];
 }
 
-// --- Conversão graus ↔ metros (equirretangular local, suficiente em <1km) --
 const M_PER_DEG_LAT = 111320;
 const M_PER_DEG_LNG = 111320 * Math.cos(CENTER[0] * Math.PI/180);
-// Tolerância: pin conta como "dentro" se estiver a até R_METERS de algum imóvel da camada.
-// Cobre a largura típica de via + recuo de calçada, evitando o "buraco" geométrico
-// entre o ponto da rua devolvido pelo geocoder e o polígono do lote.
-const R_METERS = 30;
+const R_METERS  = 30;
 const R_LAT_DEG = R_METERS / M_PER_DEG_LAT;
 const R_LNG_DEG = R_METERS / M_PER_DEG_LNG;
 
-// Distância (em metros) do ponto p ao segmento a–b. Coordenadas em [lng,lat].
 function distPtSegM(p, a, b) {
   const ax = (a[0]-p[0])*M_PER_DEG_LNG, ay = (a[1]-p[1])*M_PER_DEG_LAT;
   const bx = (b[0]-p[0])*M_PER_DEG_LNG, by = (b[1]-p[1])*M_PER_DEG_LAT;
@@ -742,10 +795,9 @@ function distPtRingM(p, ring) {
 }
 function distPtPolyM(p, rings) {
   if (pointInPoly(p, rings)) return 0;
-  return distPtRingM(p, rings[0]);   // distância ao anel externo
+  return distPtRingM(p, rings[0]);
 }
 
-// Pré-computa bboxes por feature de cada camada (acelera muito)
 const spatialIndex = {};
 function buildIndex() {
   for (const cfg of LAYERS) {
@@ -757,7 +809,6 @@ function buildIndex() {
   }
 }
 
-// Retorna Set de ids de camadas cujo imóvel mais próximo está a ≤ R_METERS do ponto.
 function layersAt(lng, lat) {
   const hit = new Set();
   const p = [lng, lat];
@@ -765,7 +816,6 @@ function layersAt(lng, lat) {
     const idx = spatialIndex[cfg.id] || [];
     for (const it of idx) {
       const b = it.bbox;
-      // bbox expandido por R (em graus) — filtra rapidamente a maioria das features
       if (lng < b[0]-R_LNG_DEG || lng > b[2]+R_LNG_DEG ||
           lat < b[1]-R_LAT_DEG || lat > b[3]+R_LAT_DEG) continue;
       const g = it.geom;
@@ -789,8 +839,8 @@ const layerById = Object.fromEntries(LAYERS.map(c => [c.id, c]));
 
 // --- Estado ----------------------------------------------------------------
 const S = {
-  preview: null,            // {lat,lng,address,marker}
-  pins: new Map(),          // id -> {id,lat,lng,address,marker,layers:Set<id>}
+  preview: null,
+  pins: new Map(),
   nextId: 1,
 };
 const STORAGE_KEY = 'vca_pins_v1';
@@ -825,7 +875,7 @@ async function geocode(q) {
             + `?access_token=${MAPBOX_TOKEN}`
             + `&country=br&language=pt&autocomplete=true&limit=8`
             + `&proximity=${CENTER[1]},${CENTER[0]}`
-            + `&bbox=-41.2,-15.4,-40.3,-14.4`     // viés VC, mas types address volta resultados próximos
+            + `&bbox=-41.2,-15.4,-40.3,-14.4`
             + `&types=address,place,locality,neighborhood,poi`;
   const r = await fetch(url, {signal: abortCtrl.signal});
   if (!r.ok) throw new Error('geocode falhou');
@@ -848,7 +898,7 @@ $input.addEventListener('input', () => {
     try {
       lastQuery = q;
       const feats = await geocode(q);
-      if (lastQuery !== q) return;  // resultado obsoleto
+      if (lastQuery !== q) return;
       renderSuggestions(feats);
     } catch(e) {
       if (e.name !== 'AbortError') console.warn(e);
@@ -885,7 +935,6 @@ function escHtml(s){
   return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-// --- Prévia + confirmação --------------------------------------------------
 function clearPreview() {
   if (S.preview && S.preview.marker) map.removeLayer(S.preview.marker);
   S.preview = null;
@@ -902,7 +951,6 @@ function selectFeature(f) {
   S.preview = {lat, lng, address: f.place_name || f.text, marker: m};
   map.flyTo([lat, lng], Math.max(map.getZoom(), 17), {duration: .8});
 
-  // calcula camadas atingidas
   const hit = layersAt(lng, lat);
   $cAddr.textContent = S.preview.address;
   $cCoord.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
@@ -933,7 +981,6 @@ document.getElementById('btnFixar').addEventListener('click', () => {
   persist(); renderList(); renderValidation();
 });
 
-// --- Pins confirmados ------------------------------------------------------
 function addPin(rec, silent=false) {
   if (rec.id >= S.nextId) S.nextId = rec.id + 1;
   const marker = L.marker([rec.lat, rec.lng], {icon: makePinIcon(false), zIndexOffset: 800}).addTo(map);
@@ -1030,7 +1077,6 @@ function renderValidation() {
   $valBars.innerHTML = bars;
 }
 
-// --- Persistência ----------------------------------------------------------
 function persist() {
   try {
     const arr = [...S.pins.values()].map(p => ({
@@ -1048,7 +1094,6 @@ function restore() {
   } catch(e) {}
 }
 
-// --- Toast (feedback efêmero) ----------------------------------------------
 const $toast = document.getElementById('toast');
 const $toastText = document.getElementById('toastText');
 const $toastIcon = document.getElementById('toastIcon');
@@ -1064,13 +1109,11 @@ function toast(msg, kind='success') {
   toastT = setTimeout(() => $toast.classList.remove('show'), 2800);
 }
 
-// --- Export / Import JSON --------------------------------------------------
 function exportJSON() {
   const pins = [...S.pins.values()];
   if (!pins.length) { toast('Nada para exportar.', 'error'); return; }
   const payload = {
-    formato: 'vca-pins',
-    versao: 1,
+    formato: 'vca-pins', versao: 1,
     exportado_em: new Date().toISOString(),
     municipio: 'Vitória da Conquista · BA',
     total_imoveis_base: TOTAL,
@@ -1083,8 +1126,7 @@ function exportJSON() {
   const url = URL.createObjectURL(blob);
   const today = new Date().toISOString().slice(0,10);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = `vca_pins_${today}.json`;
+  a.href = url; a.download = `vca_pins_${today}.json`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   toast(`${pins.length} pin${pins.length===1?'':'s'} exportado${pins.length===1?'':'s'}.`);
@@ -1096,19 +1138,10 @@ function importJSON(file) {
     let payload;
     try { payload = JSON.parse(reader.result); }
     catch(e) { toast('Arquivo inválido (não é JSON).', 'error'); return; }
-
-    // Aceita tanto o formato exportado (com .pins) quanto um array direto
     const arr = Array.isArray(payload) ? payload : (payload.pins || []);
-    if (!Array.isArray(arr) || !arr.length) {
-      toast('Arquivo sem pins válidos.', 'error'); return;
-    }
-
-    // Evita duplicar: chave = lat,lng arredondado (≈1m de tolerância)
+    if (!Array.isArray(arr) || !arr.length) { toast('Arquivo sem pins válidos.', 'error'); return; }
     const seen = new Set();
-    for (const p of S.pins.values()) {
-      seen.add(`${p.lat.toFixed(5)},${p.lng.toFixed(5)}`);
-    }
-
+    for (const p of S.pins.values()) seen.add(`${p.lat.toFixed(5)},${p.lng.toFixed(5)}`);
     let adicionados = 0, ignorados = 0, invalidos = 0;
     for (const r of arr) {
       const lat = +r.lat, lng = +r.lng;
@@ -1117,12 +1150,10 @@ function importJSON(file) {
       const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
       if (seen.has(key)) { ignorados++; continue; }
       seen.add(key);
-      // Recalcula camadas com o R atual — não confia no arquivo
       const layers = [...layersAt(lng, lat)];
       addPin({ id: S.nextId++, lat, lng, address, layers });
       adicionados++;
     }
-
     persist(); renderList(); renderValidation();
     const partes = [];
     if (adicionados) partes.push(`${adicionados} adicionado${adicionados===1?'':'s'}`);
@@ -1135,21 +1166,16 @@ function importJSON(file) {
 }
 
 document.getElementById('btnExport').addEventListener('click', exportJSON);
-document.getElementById('btnImport').addEventListener('click', () => {
-  document.getElementById('fileImport').click();
-});
+document.getElementById('btnImport').addEventListener('click', () => document.getElementById('fileImport').click());
 document.getElementById('fileImport').addEventListener('change', e => {
   const f = e.target.files && e.target.files[0];
   if (f) importJSON(f);
-  e.target.value = '';   // permite reimportar o mesmo arquivo
+  e.target.value = '';
 });
 
-// --- Fecha sugestões clicando fora -----------------------------------------
 document.addEventListener('click', e => {
   if (!e.target.closest('.search-wrap')) showSugs(false);
 });
-
-// --- ESC limpa prévia ------------------------------------------------------
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (S.preview) clearPreview();
@@ -1158,12 +1184,145 @@ document.addEventListener('keydown', e => {
 });
 
 // ===========================================================================
+// Casos confirmados — importação via CSV (lat/lon)
+// ===========================================================================
+const casoIcon = L.divIcon({className:'',html:'<div class="caso-pin"></div>',iconSize:[10,10],iconAnchor:[5,5]});
+let casoLayer = null;
+
+function parseCsv(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const header = lines[0].split(/[,;\t]/).map(h => h.trim().toLowerCase().replace(/['"]/g,''));
+  const latCol = header.findIndex(h => ['lat','latitude','latidude','lat_y'].includes(h));
+  const lonCol = header.findIndex(h => ['lon','lng','longitude','long','lon_x','lng_x'].includes(h));
+  if (latCol === -1 || lonCol === -1) {
+    toast(`CSV precisa ter colunas lat e lon (encontrado: ${header.join(', ')})`, 'error');
+    return null;
+  }
+  const pts = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(/[,;\t]/).map(c => c.trim().replace(/['"]/g,''));
+    const lat = parseFloat(cols[latCol]);
+    const lon = parseFloat(cols[lonCol]);
+    if (isFinite(lat) && isFinite(lon)) pts.push([lat, lon]);
+  }
+  return pts;
+}
+
+// ── CORRIGIDO: calcula layersAt() para cada ponto e exibe barras ────────────
+function loadCasos(text) {
+  const pts = parseCsv(text);
+  if (pts === null) return;
+  if (!pts.length) { toast('Nenhum ponto válido encontrado no CSV.', 'error'); return; }
+
+  // Limpa camada anterior
+  if (casoLayer) { map.removeLayer(casoLayer); casoLayer = null; }
+
+  // ── Contagem por camada de risco ──────────────────────────────────────────
+  const counts = {};
+  LAYERS.forEach(c => { counts[c.id] = 0; });
+  let fora = 0;
+
+  const markers = pts.map(([lat, lon]) => {
+    // Calcula quais áreas de risco este ponto toca
+    const hit = layersAt(lon, lat);   // lon primeiro (GeoJSON é [lng,lat])
+
+    if (hit.size === 0) {
+      fora++;
+    } else {
+      hit.forEach(id => counts[id]++);
+    }
+
+    return L.marker([lat, lon], {icon: casoIcon});
+  });
+
+  casoLayer = L.layerGroup(markers).addTo(map);
+
+  // Atualiza UI
+  const N = pts.length;
+  document.getElementById('csvCount').textContent = fmtN(N);
+  document.getElementById('csvResult').style.display = 'block';
+
+  // Renderiza barras de risco
+  renderCsvStats(N, counts, fora);
+
+  // Zoom para cobrir os casos
+  try {
+    const bounds = L.latLngBounds(pts);
+    if (bounds.isValid()) map.fitBounds(bounds, {padding:[40,40], maxZoom:15});
+  } catch {}
+
+  toast(`${fmtN(N)} casos carregados.`);
+}
+
+// ── NOVO: barras de distribuição para o CSV ──────────────────────────────────
+function renderCsvStats(N, counts, fora) {
+  const $csvBars = document.getElementById('csvBars');
+  if (!$csvBars) return;
+
+  const fmtPct = n => {
+    const v = (n / N) * 100;
+    return v.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:1}) + '%';
+  };
+
+  const bar = (name, cor, n) => `
+    <div class="val-bar" style="--c:${cor}">
+      <div class="val-bar-head">
+        <span class="val-bar-name">${name}</span>
+        <span class="val-bar-num"><b>${fmtN(n)}</b>/${fmtN(N)} · ${fmtPct(n)}</span>
+      </div>
+      <div class="val-bar-track">
+        <div class="val-bar-fill" style="width:${(n/N)*100}%"></div>
+      </div>
+    </div>`;
+
+  $csvBars.innerHTML =
+    LAYERS.map(c => bar(c.nome, c.cor, counts[c.id])).join('') +
+    bar('Fora das áreas de risco', '#5a6470', fora);
+}
+
+function clearCasos() {
+  if (casoLayer) { map.removeLayer(casoLayer); casoLayer = null; }
+  document.getElementById('csvResult').style.display = 'none';
+  document.getElementById('csvFile').value = '';
+  // Limpa também as barras
+  const $csvBars = document.getElementById('csvBars');
+  if ($csvBars) $csvBars.innerHTML = '';
+}
+
+// Drag & drop
+const $csvDrop = document.getElementById('csvDrop');
+const $csvFile = document.getElementById('csvFile');
+
+$csvDrop.addEventListener('dragover', e => { e.preventDefault(); $csvDrop.classList.add('over'); });
+$csvDrop.addEventListener('dragleave', () => $csvDrop.classList.remove('over'));
+$csvDrop.addEventListener('drop', e => {
+  e.preventDefault();
+  $csvDrop.classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadCasos(ev.target.result);
+  reader.readAsText(file, 'UTF-8');
+});
+
+$csvFile.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadCasos(ev.target.result);
+  reader.readAsText(file, 'UTF-8');
+});
+
+document.getElementById('csvClear').addEventListener('click', clearCasos);
+
+// ===========================================================================
 // Bootstrap
 // ===========================================================================
 async function bootstrap() {
-  await init();           // renderiza as camadas
-  buildIndex();           // pré-calcula bboxes p/ point-in-polygon
-  restore();              // pins do localStorage
+  await init();
+  buildIndex();   // ← índice espacial pronto ANTES de qualquer layersAt()
+  restore();
   renderList();
   renderValidation();
 }
