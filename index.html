@@ -344,9 +344,33 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
 .csv-result{margin-top:8px;display:none}
 .csv-stat{display:flex;align-items:center;justify-content:space-between;
   background:var(--bg-elev);border:1px solid var(--border);border-radius:7px;
-  padding:8px 12px;font-size:12px;margin-bottom:8px}
+  padding:8px 12px;font-size:12px}
 .csv-stat-n{font-family:"Bricolage Grotesque",serif;font-size:18px;font-weight:600;color:#ff6b6b}
 .csv-stat-lbl{color:var(--fg-dim);font-size:11px;margin-top:1px}
+.csv-bars{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.csv-note{font-size:10.5px;color:var(--fg-faint);margin-top:8px;line-height:1.4;font-style:italic}
+.val-bar-razao{display:flex;justify-content:space-between;align-items:center;margin-top:5px}
+.val-bar-razao .lbl{font-size:10px;color:var(--fg-faint);letter-spacing:.02em}
+.val-bar-razao .val{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;
+  padding:1px 8px;border-radius:99px;letter-spacing:.01em}
+.val-bar-razao .val.alto{background:rgba(230,57,70,.16);color:#ff6b6b}
+.val-bar-razao .val.baixo{background:rgba(63,184,175,.16);color:var(--accent)}
+.val-bar-razao .val.neutro{background:rgba(139,149,163,.16);color:var(--fg-dim)}
+
+/* Tabela de sobreposição — combinações mutuamente exclusivas de camadas */
+.csv-overlap{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.csv-overlap-title{font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--fg-faint);margin-bottom:8px}
+.csv-overlap-row{display:flex;align-items:center;gap:8px;padding:4px 0}
+.csv-overlap-row .dots{display:flex;gap:3px;flex:0 0 auto}
+.csv-overlap-row .dot{width:7px;height:7px;border-radius:50%}
+.csv-overlap-row .dot.off{background:var(--border-strong)}
+.csv-overlap-row .lbl{flex:1;font-size:11px;color:var(--fg-dim);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.csv-overlap-row .n{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;color:var(--fg)}
+.csv-overlap-row .pct{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--fg-faint);
+  min-width:40px;text-align:right}
+.csv-overlap-row.pure .lbl{color:var(--fg)}
 .csv-clear{border:none;background:transparent;color:var(--fg-faint);cursor:pointer;
   font-size:11px;padding:4px 6px;border-radius:4px;transition:all .15s}
 .csv-clear:hover{color:#ff6b6b;background:rgba(255,107,107,.1)}
@@ -355,10 +379,6 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
   background:#ff6b6b;border:2px solid #fff;
   box-shadow:0 0 0 2px rgba(255,107,107,.5),0 2px 6px rgba(0,0,0,.5)
 }
-
-/* ── NOVO: barras de risco para o CSV ── */
-.csv-bars{display:flex;flex-direction:column;gap:8px}
-.csv-note{font-size:10.5px;color:var(--fg-faint);margin-top:8px;line-height:1.4;font-style:italic}
 
 /* Ações no cabeçalho de seção (export/import) */
 .section h2{position:relative}
@@ -497,9 +517,6 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
       <div id="pinList"></div>
     </section>
 
-    <!-- ═══════════════════════════════════════════════════════════════
-         SEÇÃO CSV — drop zone + resultado com barras de risco
-         ═══════════════════════════════════════════════════════════════ -->
     <section class="section">
       <h2>Casos confirmados (CSV)</h2>
       <div class="csv-drop" id="csvDrop">
@@ -511,11 +528,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
           <span style="font-size:10.5px;opacity:.6">colunas: lat, lon (ou latitude/longitude)</span>
         </div>
       </div>
-
-      <!-- Resultado: visível após carga do CSV -->
       <div class="csv-result" id="csvResult">
-
-        <!-- cabeçalho: total + botão limpar -->
         <div class="csv-stat">
           <div>
             <div class="csv-stat-n" id="csvCount">0</div>
@@ -523,11 +536,9 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
           </div>
           <button class="csv-clear" id="csvClear">✕ Limpar</button>
         </div>
-
-        <!-- ── NOVO: barras de distribuição por área de risco ── -->
         <div class="csv-bars" id="csvBars"></div>
-        <div class="csv-note">Um caso pode estar em mais de uma área de risco.</div>
-
+        <div class="csv-overlap" id="csvOverlap"></div>
+        <div class="csv-note">Um caso pode estar em mais de uma área de risco. Razão = % de casos ÷ % de imóveis da camada — acima de 1× indica concentração de casos maior que a área ocupada pela camada.</div>
       </div>
     </section>
 
@@ -564,7 +575,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
 // ---------------------------------------------------------------------------
 // Dados injetados pelo Python
 // ---------------------------------------------------------------------------
-const LAYERS = [{"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/Risco_criadouros.geojson", "nome": "Risco de Criadouros", "id": "criadouros", "cor": "#ffb74d", "opacidade": 0.55, "descricao": "Áreas com maior incidência de focos do vetor.", "n": 0}, {"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/risco_incubacao.geojson", "nome": "Risco de Incubação", "id": "incubacao", "cor": "#c77dff", "opacidade": 0.6, "descricao": "Locais sob janela de incubação ativa.", "n": 0}, {"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/Risco_transmissao.geojson", "nome": "Risco de Transmissão", "id": "transmissao", "cor": "#e63946", "opacidade": 0.7, "descricao": "Polígonos com transmissão recente confirmada.", "n": 0}];
+const LAYERS = [{"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/Risco_criadouros.geojson", "nome": "Risco de Criadouros", "id": "criadouros", "cor": "#ffb74d", "opacidade": 0.55, "descricao": "Áreas com maior incidência de focos do vetor.", "n": 20763}, {"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/risco_incubacao.geojson", "nome": "Risco de Incubação", "id": "incubacao", "cor": "#c77dff", "opacidade": 0.6, "descricao": "Locais sob janela de incubação ativa.", "n": 33149}, {"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/Risco_transmissao.geojson", "nome": "Risco de Transmissão", "id": "transmissao", "cor": "#e63946", "opacidade": 0.7, "descricao": "Polígonos com transmissão recente confirmada.", "n": 52832}, {"url": "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/risco_criadouros_comerciais.geojson", "nome": "Risco de Criadouros Comerciais", "id": "criadouros_comerciais", "cor": "#26c6da", "opacidade": 0.55, "descricao": "Edificações comerciais com risco de criadouros do vetor.", "n": 43276}];
 const CENTER = [-14.86, -40.82];
 const ZOOM   = 13;
 const TOTAL  = 186000;
@@ -607,7 +618,7 @@ const MAPBOX_TOKEN = "pk.eyJ1IjoiZGF2aWx1Y2EiLCJhIjoiY2s2YW9qc3phMGZ0YTNncnowdXB
 // ---------------------------------------------------------------------------
 // Painel: monta os cards de camada e os controles
 // ---------------------------------------------------------------------------
-const layerObjs = {};
+const layerObjs = {};   // id -> {layer, config, ...}
 const layersWrap = document.getElementById('layers');
 
 function makeLayerCard(cfg) {
@@ -640,7 +651,7 @@ function makeLayerCard(cfg) {
 }
 
 // ---------------------------------------------------------------------------
-// Renderiza uma camada GeoJSON
+// Renderiza uma camada (assíncrono, lote a lote)
 // ---------------------------------------------------------------------------
 async function buildLayer(cfg) {
   const styleFn = () => ({
@@ -666,28 +677,39 @@ async function buildLayer(cfg) {
 
   const resp = await fetch(cfg.url);
   const geojson = await resp.json();
-  cfg.data = geojson;
+  cfg.data = geojson;   // guarda para uso posterior (ex.: point-in-polygon)
   return L.geoJSON(geojson, {style: styleFn, onEachFeature: onEach, renderer: canvasRenderer});
 }
 
 // ---------------------------------------------------------------------------
-// Pipeline assíncrono
+// Pipeline assíncrono: mostra UI, depois adiciona camadas uma a uma
 // ---------------------------------------------------------------------------
 let totalFeatures = 0;
 
 async function init() {
+  // popula painel imediatamente
   LAYERS.forEach(cfg => { makeLayerCard(cfg); totalFeatures += cfg.n; });
   document.getElementById('totalImv').textContent = fmtN(TOTAL);
   document.getElementById('emRisco').textContent  = `${fmtN(totalFeatures)} · ${fmtP(totalFeatures)}`;
 
+  // adiciona camadas progressivamente
   const allBounds = [];
   for (const cfg of LAYERS) {
     document.getElementById('loaderText').textContent = `Carregando ${cfg.nome.toLowerCase()}…`;
     await new Promise(r => requestAnimationFrame(r));
-    const lyr = await buildLayer(cfg);
-    lyr.addTo(map);
-    layerObjs[cfg.id] = { layer: lyr, cfg };
-    try { const b = lyr.getBounds(); if (b.isValid()) allBounds.push(b); } catch {}
+    try {
+      const lyr = await buildLayer(cfg);
+      lyr.addTo(map);
+      layerObjs[cfg.id] = { layer: lyr, cfg };
+      try { const b = lyr.getBounds(); if (b.isValid()) allBounds.push(b); } catch {}
+    } catch (err) {
+      console.error(`Falha ao carregar camada "${cfg.nome}":`, err);
+      toast(`Não foi possível carregar "${cfg.nome}". As outras camadas continuam funcionando.`, 'error');
+    }
+    // indexa a camada assim que ela termina (com sucesso ou não — se falhou,
+    // cfg.data fica undefined e buildIndexFor() simplesmente gera um índice
+    // vazio pra essa camada, sem travar as demais).
+    buildIndexFor(cfg);
   }
 
   if (allBounds.length) {
@@ -707,6 +729,7 @@ layersWrap.addEventListener('change', e => {
   if (!id || !layerObjs[id]) return;
   const obj = layerObjs[id];
   const card = e.target.closest('.layer');
+
   if (e.target.type === 'checkbox') {
     if (e.target.checked) { obj.layer.addTo(map); card.classList.remove('off'); }
     else                  { map.removeLayer(obj.layer); card.classList.add('off'); }
@@ -723,17 +746,20 @@ layersWrap.addEventListener('input', e => {
   document.getElementById('val-' + id).textContent = e.target.value + '%';
 });
 
+// Mapa-base
 document.querySelectorAll('.base').forEach(btn => btn.addEventListener('click', () => {
   const novo = btn.dataset.base; if (novo === baseAtual) return;
   map.removeLayer(bases[baseAtual]); bases[novo].addTo(map); baseAtual = novo;
   document.querySelectorAll('.base').forEach(b => b.classList.toggle('active', b === btn));
 }));
 
+// Coordenadas
 const coord = document.getElementById('coord');
 map.on('mousemove', e => {
   coord.textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
 });
 
+// Toggle painel mobile
 document.getElementById('panelToggle').addEventListener('click', () => {
   document.getElementById('panel').classList.toggle('hidden');
 });
@@ -742,7 +768,7 @@ document.getElementById('panelToggle').addEventListener('click', () => {
 // MÓDULO: BUSCA + VALIDAÇÃO DE ÁREAS
 // ===========================================================================
 
-// --- Point-in-polygon (ray casting) ----------------------------------------
+// --- Point-in-polygon (ray casting) com filtro de bbox ----------------------
 function pointInRing(p, ring) {
   let inside = false;
   for (let i=0, j=ring.length-1; i<ring.length; j=i++) {
@@ -769,12 +795,17 @@ function bboxOf(coords) {
   return [mnx,mny,mxx,mxy];
 }
 
+// --- Conversão graus ↔ metros (equirretangular local, suficiente em <1km) --
 const M_PER_DEG_LAT = 111320;
 const M_PER_DEG_LNG = 111320 * Math.cos(CENTER[0] * Math.PI/180);
-const R_METERS  = 30;
+// Tolerância: pin conta como "dentro" se estiver a até R_METERS de algum imóvel da camada.
+// Cobre a largura típica de via + recuo de calçada, evitando o "buraco" geométrico
+// entre o ponto da rua devolvido pelo geocoder e o polígono do lote.
+const R_METERS = 30;
 const R_LAT_DEG = R_METERS / M_PER_DEG_LAT;
 const R_LNG_DEG = R_METERS / M_PER_DEG_LNG;
 
+// Distância (em metros) do ponto p ao segmento a–b. Coordenadas em [lng,lat].
 function distPtSegM(p, a, b) {
   const ax = (a[0]-p[0])*M_PER_DEG_LNG, ay = (a[1]-p[1])*M_PER_DEG_LAT;
   const bx = (b[0]-p[0])*M_PER_DEG_LNG, by = (b[1]-p[1])*M_PER_DEG_LAT;
@@ -795,20 +826,21 @@ function distPtRingM(p, ring) {
 }
 function distPtPolyM(p, rings) {
   if (pointInPoly(p, rings)) return 0;
-  return distPtRingM(p, rings[0]);
+  return distPtRingM(p, rings[0]);   // distância ao anel externo
 }
 
+// Pré-computa bboxes por feature de UMA camada (acelera muito o layersAt()).
+// Chamada assim que cada camada termina de carregar — não espera as outras.
 const spatialIndex = {};
-function buildIndex() {
-  for (const cfg of LAYERS) {
-    const feats = (cfg.data && cfg.data.features) || [];
-    spatialIndex[cfg.id] = feats.map(f => ({
-      bbox: bboxOf(f.geometry.coordinates),
-      geom: f.geometry,
-    }));
-  }
+function buildIndexFor(cfg) {
+  const feats = (cfg.data && cfg.data.features) || [];
+  spatialIndex[cfg.id] = feats.map(f => ({
+    bbox: bboxOf(f.geometry.coordinates),
+    geom: f.geometry,
+  }));
 }
 
+// Retorna Set de ids de camadas cujo imóvel mais próximo está a ≤ R_METERS do ponto.
 function layersAt(lng, lat) {
   const hit = new Set();
   const p = [lng, lat];
@@ -816,6 +848,7 @@ function layersAt(lng, lat) {
     const idx = spatialIndex[cfg.id] || [];
     for (const it of idx) {
       const b = it.bbox;
+      // bbox expandido por R (em graus) — filtra rapidamente a maioria das features
       if (lng < b[0]-R_LNG_DEG || lng > b[2]+R_LNG_DEG ||
           lat < b[1]-R_LAT_DEG || lat > b[3]+R_LAT_DEG) continue;
       const g = it.geom;
@@ -839,8 +872,8 @@ const layerById = Object.fromEntries(LAYERS.map(c => [c.id, c]));
 
 // --- Estado ----------------------------------------------------------------
 const S = {
-  preview: null,
-  pins: new Map(),
+  preview: null,            // {lat,lng,address,marker}
+  pins: new Map(),          // id -> {id,lat,lng,address,marker,layers:Set<id>}
   nextId: 1,
 };
 const STORAGE_KEY = 'vca_pins_v1';
@@ -875,7 +908,7 @@ async function geocode(q) {
             + `?access_token=${MAPBOX_TOKEN}`
             + `&country=br&language=pt&autocomplete=true&limit=8`
             + `&proximity=${CENTER[1]},${CENTER[0]}`
-            + `&bbox=-41.2,-15.4,-40.3,-14.4`
+            + `&bbox=-41.2,-15.4,-40.3,-14.4`     // viés VC, mas types address volta resultados próximos
             + `&types=address,place,locality,neighborhood,poi`;
   const r = await fetch(url, {signal: abortCtrl.signal});
   if (!r.ok) throw new Error('geocode falhou');
@@ -898,7 +931,7 @@ $input.addEventListener('input', () => {
     try {
       lastQuery = q;
       const feats = await geocode(q);
-      if (lastQuery !== q) return;
+      if (lastQuery !== q) return;  // resultado obsoleto
       renderSuggestions(feats);
     } catch(e) {
       if (e.name !== 'AbortError') console.warn(e);
@@ -935,6 +968,7 @@ function escHtml(s){
   return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+// --- Prévia + confirmação --------------------------------------------------
 function clearPreview() {
   if (S.preview && S.preview.marker) map.removeLayer(S.preview.marker);
   S.preview = null;
@@ -951,6 +985,7 @@ function selectFeature(f) {
   S.preview = {lat, lng, address: f.place_name || f.text, marker: m};
   map.flyTo([lat, lng], Math.max(map.getZoom(), 17), {duration: .8});
 
+  // calcula camadas atingidas
   const hit = layersAt(lng, lat);
   $cAddr.textContent = S.preview.address;
   $cCoord.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
@@ -981,6 +1016,7 @@ document.getElementById('btnFixar').addEventListener('click', () => {
   persist(); renderList(); renderValidation();
 });
 
+// --- Pins confirmados ------------------------------------------------------
 function addPin(rec, silent=false) {
   if (rec.id >= S.nextId) S.nextId = rec.id + 1;
   const marker = L.marker([rec.lat, rec.lng], {icon: makePinIcon(false), zIndexOffset: 800}).addTo(map);
@@ -1077,6 +1113,7 @@ function renderValidation() {
   $valBars.innerHTML = bars;
 }
 
+// --- Persistência ----------------------------------------------------------
 function persist() {
   try {
     const arr = [...S.pins.values()].map(p => ({
@@ -1094,6 +1131,7 @@ function restore() {
   } catch(e) {}
 }
 
+// --- Toast (feedback efêmero) ----------------------------------------------
 const $toast = document.getElementById('toast');
 const $toastText = document.getElementById('toastText');
 const $toastIcon = document.getElementById('toastIcon');
@@ -1109,11 +1147,13 @@ function toast(msg, kind='success') {
   toastT = setTimeout(() => $toast.classList.remove('show'), 2800);
 }
 
+// --- Export / Import JSON --------------------------------------------------
 function exportJSON() {
   const pins = [...S.pins.values()];
   if (!pins.length) { toast('Nada para exportar.', 'error'); return; }
   const payload = {
-    formato: 'vca-pins', versao: 1,
+    formato: 'vca-pins',
+    versao: 1,
     exportado_em: new Date().toISOString(),
     municipio: 'Vitória da Conquista · BA',
     total_imoveis_base: TOTAL,
@@ -1126,7 +1166,8 @@ function exportJSON() {
   const url = URL.createObjectURL(blob);
   const today = new Date().toISOString().slice(0,10);
   const a = document.createElement('a');
-  a.href = url; a.download = `vca_pins_${today}.json`;
+  a.href = url;
+  a.download = `vca_pins_${today}.json`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   toast(`${pins.length} pin${pins.length===1?'':'s'} exportado${pins.length===1?'':'s'}.`);
@@ -1138,10 +1179,19 @@ function importJSON(file) {
     let payload;
     try { payload = JSON.parse(reader.result); }
     catch(e) { toast('Arquivo inválido (não é JSON).', 'error'); return; }
+
+    // Aceita tanto o formato exportado (com .pins) quanto um array direto
     const arr = Array.isArray(payload) ? payload : (payload.pins || []);
-    if (!Array.isArray(arr) || !arr.length) { toast('Arquivo sem pins válidos.', 'error'); return; }
+    if (!Array.isArray(arr) || !arr.length) {
+      toast('Arquivo sem pins válidos.', 'error'); return;
+    }
+
+    // Evita duplicar: chave = lat,lng arredondado (≈1m de tolerância)
     const seen = new Set();
-    for (const p of S.pins.values()) seen.add(`${p.lat.toFixed(5)},${p.lng.toFixed(5)}`);
+    for (const p of S.pins.values()) {
+      seen.add(`${p.lat.toFixed(5)},${p.lng.toFixed(5)}`);
+    }
+
     let adicionados = 0, ignorados = 0, invalidos = 0;
     for (const r of arr) {
       const lat = +r.lat, lng = +r.lng;
@@ -1150,10 +1200,12 @@ function importJSON(file) {
       const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
       if (seen.has(key)) { ignorados++; continue; }
       seen.add(key);
+      // Recalcula camadas com o R atual — não confia no arquivo
       const layers = [...layersAt(lng, lat)];
       addPin({ id: S.nextId++, lat, lng, address, layers });
       adicionados++;
     }
+
     persist(); renderList(); renderValidation();
     const partes = [];
     if (adicionados) partes.push(`${adicionados} adicionado${adicionados===1?'':'s'}`);
@@ -1166,16 +1218,21 @@ function importJSON(file) {
 }
 
 document.getElementById('btnExport').addEventListener('click', exportJSON);
-document.getElementById('btnImport').addEventListener('click', () => document.getElementById('fileImport').click());
+document.getElementById('btnImport').addEventListener('click', () => {
+  document.getElementById('fileImport').click();
+});
 document.getElementById('fileImport').addEventListener('change', e => {
   const f = e.target.files && e.target.files[0];
   if (f) importJSON(f);
-  e.target.value = '';
+  e.target.value = '';   // permite reimportar o mesmo arquivo
 });
 
+// --- Fecha sugestões clicando fora -----------------------------------------
 document.addEventListener('click', e => {
   if (!e.target.closest('.search-wrap')) showSugs(false);
 });
+
+// --- ESC limpa prévia ------------------------------------------------------
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (S.preview) clearPreview();
@@ -1193,12 +1250,16 @@ function parseCsv(text) {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
   const header = lines[0].split(/[,;\t]/).map(h => h.trim().toLowerCase().replace(/['"]/g,''));
+
+  // Aceita variações comuns de nome de coluna
   const latCol = header.findIndex(h => ['lat','latitude','latidude','lat_y'].includes(h));
   const lonCol = header.findIndex(h => ['lon','lng','longitude','long','lon_x','lng_x'].includes(h));
+
   if (latCol === -1 || lonCol === -1) {
     toast(`CSV precisa ter colunas lat e lon (encontrado: ${header.join(', ')})`, 'error');
     return null;
   }
+
   const pts = [];
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(/[,;\t]/).map(c => c.trim().replace(/['"]/g,''));
@@ -1209,42 +1270,43 @@ function parseCsv(text) {
   return pts;
 }
 
-// ── CORRIGIDO: calcula layersAt() para cada ponto e exibe barras ────────────
+// Calcula layersAt() para cada ponto do CSV e exibe barras de distribuição,
+// incluindo a razão entre % de casos e % de imóveis por camada.
 function loadCasos(text) {
   const pts = parseCsv(text);
-  if (pts === null) return;
+  if (pts === null) return;   // erro já notificado
   if (!pts.length) { toast('Nenhum ponto válido encontrado no CSV.', 'error'); return; }
 
-  // Limpa camada anterior
+  // Limpa camada anterior se existir
   if (casoLayer) { map.removeLayer(casoLayer); casoLayer = null; }
 
-  // ── Contagem por camada de risco ──────────────────────────────────────────
+  // Contagem de casos por camada de risco
   const counts = {};
   LAYERS.forEach(c => { counts[c.id] = 0; });
   let fora = 0;
 
+  // Combinações mutuamente exclusivas (cada caso entra em exatamente uma
+  // chave), para a tabela de sobreposição — não interfere em counts/fora acima.
+  const combos = {};
+  const bump = key => { combos[key] = (combos[key] || 0) + 1; };
+
   const markers = pts.map(([lat, lon]) => {
-    // Calcula quais áreas de risco este ponto toca
     const hit = layersAt(lon, lat);   // lon primeiro (GeoJSON é [lng,lat])
-
-    if (hit.size === 0) {
-      fora++;
-    } else {
+    if (hit.size === 0) { fora++; bump(''); }
+    else {
       hit.forEach(id => counts[id]++);
+      bump(LAYERS.map(c => c.id).filter(id => hit.has(id)).join('+'));
     }
-
     return L.marker([lat, lon], {icon: casoIcon});
   });
-
   casoLayer = L.layerGroup(markers).addTo(map);
 
-  // Atualiza UI
   const N = pts.length;
   document.getElementById('csvCount').textContent = fmtN(N);
   document.getElementById('csvResult').style.display = 'block';
 
-  // Renderiza barras de risco
   renderCsvStats(N, counts, fora);
+  renderCsvOverlap(N, combos);
 
   // Zoom para cobrir os casos
   try {
@@ -1255,39 +1317,108 @@ function loadCasos(text) {
   toast(`${fmtN(N)} casos carregados.`);
 }
 
-// ── NOVO: barras de distribuição para o CSV ──────────────────────────────────
+// Barras de distribuição dos casos por camada, com quantidade, percentual
+// de casos e razão em relação ao percentual de imóveis daquela camada.
 function renderCsvStats(N, counts, fora) {
   const $csvBars = document.getElementById('csvBars');
   if (!$csvBars) return;
+
+  const fmtPct = (n, base) => {
+    const v = (n / base) * 100;
+    return v.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:1}) + '%';
+  };
+  const fmtRazao = v => v.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}) + '×';
+
+  // imoveisN: nº de imóveis do município na camada (mesma base dos cards de
+  // "Camadas de risco", cfg.n). null = sem base de comparação (ex.: "fora").
+  const bar = (name, cor, n, imoveisN) => {
+    const pctCasosNum = (n / N) * 100;
+
+    let razaoRow = '';
+    if (imoveisN != null) {
+      const pctImoveisNum = (imoveisN / TOTAL) * 100;
+      const razao = pctImoveisNum > 0 ? (pctCasosNum / pctImoveisNum) : 0;
+      const cls = razao >= 1.25 ? 'alto' : (razao <= 0.75 ? 'baixo' : 'neutro');
+      razaoRow = `
+      <div class="val-bar-razao">
+        <span class="lbl">vs. ${fmtP(imoveisN)} dos imóveis</span>
+        <span class="val ${cls}">${fmtRazao(razao)}</span>
+      </div>`;
+    }
+
+    return `
+    <div class="val-bar" style="--c:${cor}">
+      <div class="val-bar-head">
+        <span class="val-bar-name">${name}</span>
+        <span class="val-bar-num"><b>${fmtN(n)}</b>/${fmtN(N)} · ${fmtPct(n, N)}</span>
+      </div>
+      <div class="val-bar-track">
+        <div class="val-bar-fill" style="width:${pctCasosNum}%"></div>
+      </div>
+      ${razaoRow}
+    </div>`;
+  };
+
+  $csvBars.innerHTML =
+    LAYERS.map(c => bar(c.nome, c.cor, counts[c.id], c.n)).join('') +
+    bar('Fora das áreas de risco', '#5a6470', fora, null);
+}
+
+// Tabela de sobreposição: combinações mutuamente exclusivas de camadas, onde
+// cada caso aparece em exatamente uma linha. Serve para distinguir "casos que
+// só estão em Incubação" de "casos que estão em Incubação PORQUE também estão
+// em Transmissão" — o confundimento que as barras acima, sozinhas, escondem.
+function renderCsvOverlap(N, combos) {
+  const $el = document.getElementById('csvOverlap');
+  if (!$el) return;
+
+  const ids = LAYERS.map(c => c.id);
+  const nomeOf = {}; LAYERS.forEach(c => { nomeOf[c.id] = c.nome.replace('Risco de ', ''); });
+  const corOf  = {}; LAYERS.forEach(c => { corOf[c.id]  = c.cor; });
 
   const fmtPct = n => {
     const v = (n / N) * 100;
     return v.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:1}) + '%';
   };
 
-  const bar = (name, cor, n) => `
-    <div class="val-bar" style="--c:${cor}">
-      <div class="val-bar-head">
-        <span class="val-bar-name">${name}</span>
-        <span class="val-bar-num"><b>${fmtN(n)}</b>/${fmtN(N)} · ${fmtPct(n)}</span>
-      </div>
-      <div class="val-bar-track">
-        <div class="val-bar-fill" style="width:${(n/N)*100}%"></div>
-      </div>
-    </div>`;
+  // Ordem de exibição: combinações puras (1 camada, na ordem das camadas),
+  // depois combinações múltiplas (mais camadas primeiro), depois "fora".
+  // Só entram linhas com pelo menos 1 caso.
+  const rows = [];
+  ids.forEach(id => { if (combos[id]) rows.push({ids:[id], n:combos[id], pure:true}); });
+  Object.keys(combos)
+    .filter(k => k.includes('+'))
+    .map(k => ({ids:k.split('+'), n:combos[k]}))
+    .sort((a,b) => b.ids.length - a.ids.length || b.n - a.n)
+    .forEach(r => rows.push(r));
+  if (combos['']) rows.push({ids:[], n:combos[''], fora:true});
 
-  $csvBars.innerHTML =
-    LAYERS.map(c => bar(c.nome, c.cor, counts[c.id])).join('') +
-    bar('Fora das áreas de risco', '#5a6470', fora);
+  $el.innerHTML =
+    `<div class="csv-overlap-title">Sobreposição entre camadas (cada caso conta 1×)</div>` +
+    rows.map(r => {
+      const dots = ids.map(id => {
+        const on = r.ids.includes(id);
+        return `<span class="dot${on?'':' off'}"${on?` style="background:${corOf[id]}"`:''} title="${nomeOf[id]}"></span>`;
+      }).join('');
+      const lbl = r.fora ? 'Fora de todas as camadas' : r.ids.map(id => nomeOf[id]).join(' + ');
+      return `
+      <div class="csv-overlap-row${r.pure?' pure':''}">
+        <span class="dots">${dots}</span>
+        <span class="lbl">${lbl}</span>
+        <span class="n">${fmtN(r.n)}</span>
+        <span class="pct">${fmtPct(r.n)}</span>
+      </div>`;
+    }).join('');
 }
 
 function clearCasos() {
   if (casoLayer) { map.removeLayer(casoLayer); casoLayer = null; }
   document.getElementById('csvResult').style.display = 'none';
   document.getElementById('csvFile').value = '';
-  // Limpa também as barras
   const $csvBars = document.getElementById('csvBars');
   if ($csvBars) $csvBars.innerHTML = '';
+  const $csvOverlap = document.getElementById('csvOverlap');
+  if ($csvOverlap) $csvOverlap.innerHTML = '';
 }
 
 // Drag & drop
@@ -1306,6 +1437,7 @@ $csvDrop.addEventListener('drop', e => {
   reader.readAsText(file, 'UTF-8');
 });
 
+// Clique normal (input file)
 $csvFile.addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -1320,9 +1452,8 @@ document.getElementById('csvClear').addEventListener('click', clearCasos);
 // Bootstrap
 // ===========================================================================
 async function bootstrap() {
-  await init();
-  buildIndex();   // ← índice espacial pronto ANTES de qualquer layersAt()
-  restore();
+  await init();           // renderiza as camadas (índice já é construído camada a camada)
+  restore();              // pins do localStorage
   renderList();
   renderValidation();
 }
