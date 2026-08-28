@@ -7,8 +7,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<!-- fallback: se o jsDelivr estiver bloqueado na rede do usuário, tenta unpkg -->
+<script>
+(function () {
+  var l = document.querySelector('link[href*="leaflet.css"]');
+  l.onerror = function () {
+    var f = document.createElement('link');
+    f.rel = 'stylesheet';
+    f.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(f);
+  };
+})();
+</script>
 
 <style>
 :root{
@@ -32,6 +44,11 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
   font-family:"Geist","Inter",system-ui,sans-serif;font-size:14px;overflow:hidden}
 
 #map{position:absolute;inset:0;background:var(--bg)}
+/* Simula um mapa-base "escuro" invertendo só os tiles do OpenStreetMap —
+   não atinge o overlayPane/markerPane, então camadas de risco e pins
+   continuam com as cores originais. */
+.leaflet-tile-pane{transition:filter .15s ease}
+#map.dark-osm .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.9)}
 .leaflet-container{background:var(--bg)!important;font-family:inherit}
 .leaflet-control-attribution{background:rgba(10,13,18,.7)!important;color:var(--fg-faint)!important;
   font-size:10px;backdrop-filter:blur(6px)}
@@ -568,8 +585,18 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
 
 <div class="loader" id="loader"><div class="spin"></div><span id="loaderText">Carregando camadas…</span></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- fallback: se o jsDelivr estiver bloqueado, injeta o unpkg antes que o
+     script seguinte precise de "L" (document.write ainda funciona aqui
+     porque roda em tempo de parsing, antes do DOMContentLoaded) -->
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""
+        onerror="document.write('&lt;script src=&quot;https://unpkg.com/leaflet@1.9.4/dist/leaflet.js&quot; integrity=&quot;sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=&quot; crossorigin=&quot;&quot;&gt;&lt;/script&gt;')"></script>
+<script>
+  if (typeof L === 'undefined') {
+    document.getElementById('loaderText').textContent =
+      'Não foi possível carregar a biblioteca do mapa (Leaflet). Verifique bloqueadores de anúncio/rede e recarregue a página.';
+  }
+</script>
 
 <script>
 // ---------------------------------------------------------------------------
@@ -594,11 +621,15 @@ const fmtP = (n) => {
 // ---------------------------------------------------------------------------
 const canvasRenderer = L.canvas({ padding: 0.5 });
 
+// OSM não tem versão escura oficial: usamos o mesmo tile claro do OSM em
+// ambos os modos, e o "Escuro" é simulado com filtro CSS no container do
+// mapa (função applyBaseFilter(), mais abaixo).
+const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
 const bases = {
-  dark:  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-          {maxZoom:20, attribution:'© OpenStreetMap · © CARTO'}),
-  light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-          {maxZoom:20, attribution:'© OpenStreetMap · © CARTO'}),
+  dark:  L.tileLayer(OSM_URL, {maxZoom:19, subdomains:'abc', attribution: OSM_ATTR}),
+  light: L.tileLayer(OSM_URL, {maxZoom:19, subdomains:'abc', attribution: OSM_ATTR}),
   sat:   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
           {maxZoom:19, attribution:'© Esri · World Imagery'}),
 };
@@ -611,6 +642,13 @@ const map = L.map('map', {
 });
 bases.dark.addTo(map);
 let baseAtual = 'dark';
+
+// Alterna o filtro CSS de inversão (só existe efeito no modo "dark", já que
+// light e sat usam tiles sem filtro).
+function applyBaseFilter(nome) {
+  document.getElementById('map').classList.toggle('dark-osm', nome === 'dark');
+}
+applyBaseFilter(baseAtual);
 
 // Token MapBox (injetado pelo Python)
 const MAPBOX_TOKEN = "pk.eyJ1IjoiZGF2aWx1Y2EiLCJhIjoiY2s2YW9qc3phMGZ0YTNncnowdXBhZnE2ciJ9.eYXvXXtrHrMGuD8hWIpskQ";
@@ -697,19 +735,10 @@ async function init() {
   for (const cfg of LAYERS) {
     document.getElementById('loaderText').textContent = `Carregando ${cfg.nome.toLowerCase()}…`;
     await new Promise(r => requestAnimationFrame(r));
-    try {
-      const lyr = await buildLayer(cfg);
-      lyr.addTo(map);
-      layerObjs[cfg.id] = { layer: lyr, cfg };
-      try { const b = lyr.getBounds(); if (b.isValid()) allBounds.push(b); } catch {}
-    } catch (err) {
-      console.error(`Falha ao carregar camada "${cfg.nome}":`, err);
-      toast(`Não foi possível carregar "${cfg.nome}". As outras camadas continuam funcionando.`, 'error');
-    }
-    // indexa a camada assim que ela termina (com sucesso ou não — se falhou,
-    // cfg.data fica undefined e buildIndexFor() simplesmente gera um índice
-    // vazio pra essa camada, sem travar as demais).
-    buildIndexFor(cfg);
+    const lyr = await buildLayer(cfg);
+    lyr.addTo(map);
+    layerObjs[cfg.id] = { layer: lyr, cfg };
+    try { const b = lyr.getBounds(); if (b.isValid()) allBounds.push(b); } catch {}
   }
 
   if (allBounds.length) {
@@ -750,6 +779,7 @@ layersWrap.addEventListener('input', e => {
 document.querySelectorAll('.base').forEach(btn => btn.addEventListener('click', () => {
   const novo = btn.dataset.base; if (novo === baseAtual) return;
   map.removeLayer(bases[baseAtual]); bases[novo].addTo(map); baseAtual = novo;
+  applyBaseFilter(baseAtual);
   document.querySelectorAll('.base').forEach(b => b.classList.toggle('active', b === btn));
 }));
 
@@ -829,15 +859,16 @@ function distPtPolyM(p, rings) {
   return distPtRingM(p, rings[0]);   // distância ao anel externo
 }
 
-// Pré-computa bboxes por feature de UMA camada (acelera muito o layersAt()).
-// Chamada assim que cada camada termina de carregar — não espera as outras.
+// Pré-computa bboxes por feature de cada camada (acelera muito)
 const spatialIndex = {};
-function buildIndexFor(cfg) {
-  const feats = (cfg.data && cfg.data.features) || [];
-  spatialIndex[cfg.id] = feats.map(f => ({
-    bbox: bboxOf(f.geometry.coordinates),
-    geom: f.geometry,
-  }));
+function buildIndex() {
+  for (const cfg of LAYERS) {
+    const feats = (cfg.data && cfg.data.features) || [];
+    spatialIndex[cfg.id] = feats.map(f => ({
+      bbox: bboxOf(f.geometry.coordinates),
+      geom: f.geometry,
+    }));
+  }
 }
 
 // Retorna Set de ids de camadas cujo imóvel mais próximo está a ≤ R_METERS do ponto.
@@ -1452,7 +1483,8 @@ document.getElementById('csvClear').addEventListener('click', clearCasos);
 // Bootstrap
 // ===========================================================================
 async function bootstrap() {
-  await init();           // renderiza as camadas (índice já é construído camada a camada)
+  await init();           // renderiza as camadas
+  buildIndex();           // pré-calcula bboxes p/ point-in-polygon
   restore();              // pins do localStorage
   renderList();
   renderValidation();
