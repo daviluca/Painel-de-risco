@@ -4,11 +4,13 @@ on:
   schedule:
     # Roda todo dia às 09:00 UTC (06:00 horário de Brasília)
     - cron: '0 9 * * *'
-  workflow_dispatch: {}  # permite rodar manualmente pelo GitHub também
+  workflow_dispatch: {} # permite rodar manualmente pelo GitHub também
 
 jobs:
   ping-supabase:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Acessar bucket do Supabase Storage
         run: |
@@ -16,3 +18,16 @@ jobs:
           curl -s -o /dev/null -w "Status: %{http_code}\n" \
             "https://qdklyuankphpxdwechwl.supabase.co/storage/v1/object/public/mapa-vca-dados/"
           echo "Ping concluído em $(date)"
+
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Registrar timestamp e commitar
+        run: |
+          mkdir -p .github/keep-alive
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/keep-alive/last-ping.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/keep-alive/last-ping.txt
+          git diff --staged --quiet || git commit -m "chore: keep-alive ping $(date -u +%Y-%m-%d)"
+          git push
