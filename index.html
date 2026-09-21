@@ -347,6 +347,33 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
   transition:width .35s cubic-bezier(.4,0,.2,1)}
 .val-note{font-size:10.5px;color:var(--fg-faint);margin-top:10px;line-height:1.4;font-style:italic}
 
+/* ---------- Planejamento de equipe (ACE) ---------- */
+.ace-note{font-size:10.5px;color:var(--fg-faint);line-height:1.4;font-style:italic}
+.ace-imoveis{display:flex;align-items:baseline;gap:6px;margin-bottom:14px;padding-bottom:12px;
+  border-bottom:1px solid var(--border)}
+.ace-imoveis #aceImoveisN{font-family:"Bricolage Grotesque",serif;font-size:22px;font-weight:600;color:var(--fg)}
+.ace-imoveis-lbl{font-size:11px;color:var(--fg-dim)}
+.ace-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+.ace-grid-1{grid-template-columns:1fr}
+.ace-field label{display:block;font-size:10.5px;color:var(--fg-faint);margin-bottom:4px;
+  text-transform:uppercase;letter-spacing:.04em}
+.ace-field input{width:100%;background:var(--bg-elev-2);border:1px solid var(--border);border-radius:6px;
+  padding:8px 10px;color:var(--fg);font-family:"JetBrains Mono",monospace;font-size:13px;
+  box-sizing:border-box}
+.ace-field input:focus{outline:none;border-color:var(--accent)}
+.ace-field input::placeholder{color:var(--fg-faint)}
+.ace-divider{font-size:10px;color:var(--fg-faint);text-align:center;margin:14px 0 10px;
+  text-transform:uppercase;letter-spacing:.05em;position:relative}
+.ace-divider::before,.ace-divider::after{content:"";position:absolute;top:50%;width:28%;
+  height:1px;background:var(--border)}
+.ace-divider::before{left:0}
+.ace-divider::after{right:0}
+.ace-result{margin-top:12px;padding:10px 12px;background:var(--bg-elev-2);border:1px solid var(--border);
+  border-radius:8px}
+.ace-result-lbl{font-size:10.5px;color:var(--fg-dim);margin-bottom:3px}
+.ace-result-n{font-family:"Bricolage Grotesque",serif;font-size:20px;font-weight:600;color:var(--accent)}
+.ace-result-unit{font-family:"Geist",sans-serif;font-size:12px;font-weight:400;color:var(--fg-dim)}
+
 /* ---------- Drop zone CSV de casos ---------- */
 .csv-drop{
   border:2px dashed var(--border);border-radius:8px;padding:14px 12px;
@@ -391,6 +418,34 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
 .csv-clear{border:none;background:transparent;color:var(--fg-faint);cursor:pointer;
   font-size:11px;padding:4px 6px;border-radius:4px;transition:all .15s}
 .csv-clear:hover{color:#ff6b6b;background:rgba(255,107,107,.1)}
+
+/* ---------- Evolução semanal de casos (tendência) ---------- */
+#trendZona{width:100%;background:var(--bg-elev-2);border:1px solid var(--border);border-radius:6px;
+  padding:8px 10px;color:var(--fg);font-family:"Geist",sans-serif;font-size:12.5px;box-sizing:border-box}
+#trendZona:focus{outline:none;border-color:var(--accent)}
+#trendSummary{display:flex;align-items:baseline;gap:8px;margin:12px 0 4px}
+.trend-delta{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;
+  padding:2px 8px;border-radius:99px}
+.trend-delta.up{background:rgba(230,57,70,.16);color:#ff6b6b}
+.trend-delta.down{background:rgba(63,184,175,.16);color:var(--accent)}
+.trend-delta.flat{background:rgba(139,149,163,.16);color:var(--fg-dim)}
+.trend-summary-lbl{font-size:11px;color:var(--fg-dim)}
+#trendChart{margin:10px 0 14px}
+.trend-bar-col{cursor:default}
+.trend-bar-col:hover rect{opacity:.85}
+.trend-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px}
+.trend-table th{text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--fg-faint);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--border)}
+.trend-table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--fg-dim);
+  font-family:"JetBrains Mono",monospace}
+.trend-table tr:last-child td{border-bottom:none}
+.trend-table tr:nth-child(even){background:color-mix(in srgb, var(--bg-elev-2) 45%, transparent)}
+.trend-table td.tn{color:var(--fg);font-weight:600}
+.trend-table td.tv-up{color:#ff6b6b}
+.trend-table td.tv-down{color:var(--accent)}
+.trend-table td.tv-flat{color:var(--fg-faint)}
+.trend-empty{font-size:11px;color:var(--fg-faint);font-style:italic;padding:8px 0}
+
 .caso-pin{
   width:10px;height:10px;border-radius:50%;
   background:#ff6b6b;border:2px solid #fff;
@@ -506,6 +561,40 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
       <div id="layers"></div>
     </section>
 
+    <section class="section" id="aceSection">
+      <h2>Planejamento de equipe <span style="float:right;font-weight:400;color:var(--fg-faint);text-transform:none;letter-spacing:0">ACE</span></h2>
+      <div class="ace-note" style="margin-bottom:8px">Considera as camadas marcadas (✓) acima. Imóvel presente em mais de uma camada marcada é contado uma única vez.</div>
+      <div class="ace-imoveis">
+        <span id="aceImoveisN">0</span>
+        <span class="ace-imoveis-lbl">imóveis na área marcada</span>
+      </div>
+      <div class="ace-grid">
+        <div class="ace-field">
+          <label for="aceCount">ACEs disponíveis</label>
+          <input type="number" id="aceCount" min="0" step="1" inputmode="numeric" placeholder="ex: 8">
+        </div>
+        <div class="ace-field">
+          <label for="aceRate">Imóveis/dia por ACE</label>
+          <input type="number" id="aceRate" min="1" step="1" inputmode="numeric" placeholder="ex: 20">
+        </div>
+      </div>
+      <div class="ace-result" id="aceResultDias" style="display:none">
+        <div class="ace-result-lbl">Tempo estimado para cobrir a área</div>
+        <div class="ace-result-n"><span id="aceDiasN">0</span> <span class="ace-result-unit">dias</span></div>
+      </div>
+      <div class="ace-divider">ou informe um prazo</div>
+      <div class="ace-grid ace-grid-1">
+        <div class="ace-field">
+          <label for="aceDeadline">Prazo desejado (dias)</label>
+          <input type="number" id="aceDeadline" min="1" step="1" inputmode="numeric" placeholder="ex: 10">
+        </div>
+      </div>
+      <div class="ace-result" id="aceResultAces" style="display:none">
+        <div class="ace-result-lbl">ACEs necessários para cumprir o prazo</div>
+        <div class="ace-result-n"><span id="aceNecN">0</span> <span class="ace-result-unit">agentes</span></div>
+      </div>
+    </section>
+
     <section class="section" id="valSection" style="display:none">
       <h2>Validação <span style="float:right;font-weight:400;color:var(--fg-faint);text-transform:none;letter-spacing:0">de áreas técnicas</span></h2>
       <div class="val-summary"><b id="valTotal">0</b> pin<span id="valS">s</span> confirmado<span id="valS2">s</span></div>
@@ -556,6 +645,29 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
         <div class="csv-bars" id="csvBars"></div>
         <div class="csv-overlap" id="csvOverlap"></div>
         <div class="csv-note">Um caso pode estar em mais de uma área de risco. Razão = % de casos ÷ % de imóveis da camada — acima de 1× indica concentração de casos maior que a área ocupada pela camada.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Evolução semanal de casos</h2>
+      <div class="csv-drop" id="trendDrop">
+        <input type="file" id="trendFile" accept=".csv,text/csv">
+        <div class="csv-drop-ico">📈</div>
+        <div class="csv-drop-txt">
+          <b>Arraste o CSV de histórico aqui</b>
+          ou clique para selecionar<br>
+          <span style="font-size:10.5px;opacity:.6">colunas: lat, lon, data (uma linha por caso, várias semanas)</span>
+        </div>
+      </div>
+      <div id="trendResult" style="display:none">
+        <div class="ace-field" style="margin-top:12px">
+          <label for="trendZona">Zona</label>
+          <select id="trendZona"></select>
+        </div>
+        <div id="trendSummary"></div>
+        <div id="trendChart"></div>
+        <div id="trendTableWrap"></div>
+        <button class="csv-clear" id="trendClear" style="margin-top:10px">✕ Limpar histórico</button>
       </div>
     </section>
 
@@ -621,17 +733,28 @@ const fmtP = (n) => {
 // ---------------------------------------------------------------------------
 const canvasRenderer = L.canvas({ padding: 0.5 });
 
-// OSM não tem versão escura oficial: usamos o mesmo tile claro do OSM em
-// ambos os modos, e o "Escuro" é simulado com filtro CSS no container do
-// mapa (função applyBaseFilter(), mais abaixo).
-const OSM_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+// Token MapBox (injetado pelo Python)
+const MAPBOX_TOKEN = "pk.eyJ1IjoiZGF2aWx1Y2EiLCJhIjoiY2s2YW9qc3phMGZ0YTNncnowdXBhZnE2ciJ9.eYXvXXtrHrMGuD8hWIpskQ";
+
+// Tiles do Mapbox (troca dos tiles do OSM, que passaram a bloquear o domínio
+// do GitHub Pages por violar a política de uso dos servidores voluntários).
+// Usa o mesmo token já existente para o geocoding.
+function mapboxTileLayer(estilo) {
+  return L.tileLayer(
+    `https://api.mapbox.com/styles/v1/mapbox/${estilo}/tiles/{z}/{x}/{y}{r}?access_token=${MAPBOX_TOKEN}`,
+    {
+      maxZoom: 19,
+      tileSize: 512,
+      zoomOffset: -1,
+      attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }
+  );
+}
 
 const bases = {
-  dark:  L.tileLayer(OSM_URL, {maxZoom:19, subdomains:'abc', attribution: OSM_ATTR}),
-  light: L.tileLayer(OSM_URL, {maxZoom:19, subdomains:'abc', attribution: OSM_ATTR}),
-  sat:   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-          {maxZoom:19, attribution:'© Esri · World Imagery'}),
+  dark:  mapboxTileLayer('dark-v11'),
+  light: mapboxTileLayer('light-v11'),
+  sat:   mapboxTileLayer('satellite-streets-v12'),
 };
 
 const map = L.map('map', {
@@ -643,15 +766,13 @@ const map = L.map('map', {
 bases.dark.addTo(map);
 let baseAtual = 'dark';
 
-// Alterna o filtro CSS de inversão (só existe efeito no modo "dark", já que
-// light e sat usam tiles sem filtro).
+// Mapbox já fornece um estilo escuro de verdade, então o filtro CSS de
+// inversão não é mais necessário — mantida como função vazia para não
+// quebrar chamadas existentes a applyBaseFilter() no restante do código.
 function applyBaseFilter(nome) {
-  document.getElementById('map').classList.toggle('dark-osm', nome === 'dark');
+  document.getElementById('map').classList.remove('dark-osm');
 }
 applyBaseFilter(baseAtual);
-
-// Token MapBox (injetado pelo Python)
-const MAPBOX_TOKEN = "pk.eyJ1IjoiZGF2aWx1Y2EiLCJhIjoiY2s2YW9qc3phMGZ0YTNncnowdXBhZnE2ciJ9.eYXvXXtrHrMGuD8hWIpskQ";
 
 // ---------------------------------------------------------------------------
 // Painel: monta os cards de camada e os controles
@@ -723,6 +844,7 @@ async function buildLayer(cfg) {
 // Pipeline assíncrono: mostra UI, depois adiciona camadas uma a uma
 // ---------------------------------------------------------------------------
 let totalFeatures = 0;
+let indexReady = false;   // true quando spatialIndex de todas as camadas está pronto
 
 async function init() {
   // popula painel imediatamente
@@ -735,11 +857,22 @@ async function init() {
   for (const cfg of LAYERS) {
     document.getElementById('loaderText').textContent = `Carregando ${cfg.nome.toLowerCase()}…`;
     await new Promise(r => requestAnimationFrame(r));
-    const lyr = await buildLayer(cfg);
-    lyr.addTo(map);
-    layerObjs[cfg.id] = { layer: lyr, cfg };
-    try { const b = lyr.getBounds(); if (b.isValid()) allBounds.push(b); } catch {}
+    try {
+      const lyr = await buildLayer(cfg);
+      lyr.addTo(map);
+      layerObjs[cfg.id] = { layer: lyr, cfg };
+      try { const b = lyr.getBounds(); if (b.isValid()) allBounds.push(b); } catch {}
+    } catch (err) {
+      console.error(`Falha ao carregar camada "${cfg.nome}":`, err);
+      toast(`Não foi possível carregar "${cfg.nome}". As outras camadas continuam funcionando.`, 'error');
+    }
+    // indexa a camada assim que ela termina (sucesso ou falha — se falhou,
+    // cfg.data fica undefined e o índice dessa camada fica vazio, sem
+    // travar as demais nem o cálculo de ACE).
+    buildIndexFor(cfg);
   }
+  indexReady = true;
+  renderAce();
 
   if (allBounds.length) {
     const merged = allBounds.reduce((a,b) => a.extend(b), L.latLngBounds(allBounds[0].getSouthWest(), allBounds[0].getNorthEast()));
@@ -762,6 +895,7 @@ layersWrap.addEventListener('change', e => {
   if (e.target.type === 'checkbox') {
     if (e.target.checked) { obj.layer.addTo(map); card.classList.remove('off'); }
     else                  { map.removeLayer(obj.layer); card.classList.add('off'); }
+    renderAce();   // a área marcada mudou — recalcula o planejamento de ACE
   }
 });
 
@@ -773,6 +907,53 @@ layersWrap.addEventListener('input', e => {
   obj.cfg.opacidade = v;
   obj.layer.setStyle({fillOpacity: v});
   document.getElementById('val-' + id).textContent = e.target.value + '%';
+});
+
+// ---------------------------------------------------------------------------
+// Planejamento de equipe (ACE): imóveis únicos na área marcada ÷ produtividade
+// informada = dias necessários (ou o inverso: prazo informado = ACEs necessários)
+// ---------------------------------------------------------------------------
+function camadasMarcadas() {
+  return [...layersWrap.querySelectorAll('input[type=checkbox]:checked')].map(el => el.dataset.id);
+}
+
+function renderAce() {
+  const $imv = document.getElementById('aceImoveisN');
+  if (!$imv) return;   // seção ainda não existe no DOM (não deveria acontecer)
+
+  if (!indexReady) { $imv.textContent = '…'; return; }
+
+  const ids = camadasMarcadas();
+  const imoveis = imoveisUnicos(ids);
+  $imv.textContent = fmtN(imoveis);
+
+  const aceCount   = parseFloat(document.getElementById('aceCount').value);
+  const aceRate    = parseFloat(document.getElementById('aceRate').value);
+  const deadline   = parseFloat(document.getElementById('aceDeadline').value);
+
+  // Modo A: tenho X ACEs, quantos dias levo?
+  const $rDias = document.getElementById('aceResultDias');
+  if (imoveis > 0 && aceCount > 0 && aceRate > 0) {
+    const dias = Math.ceil(imoveis / (aceCount * aceRate));
+    document.getElementById('aceDiasN').textContent = fmtN(dias);
+    $rDias.style.display = 'block';
+  } else {
+    $rDias.style.display = 'none';
+  }
+
+  // Modo B: quero terminar em Y dias, quantos ACEs preciso?
+  const $rAces = document.getElementById('aceResultAces');
+  if (imoveis > 0 && aceRate > 0 && deadline > 0) {
+    const necessarios = Math.ceil(imoveis / (aceRate * deadline));
+    document.getElementById('aceNecN').textContent = fmtN(necessarios);
+    $rAces.style.display = 'block';
+  } else {
+    $rAces.style.display = 'none';
+  }
+}
+
+['aceCount', 'aceRate', 'aceDeadline'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderAce);
 });
 
 // Mapa-base
@@ -859,16 +1040,59 @@ function distPtPolyM(p, rings) {
   return distPtRingM(p, rings[0]);   // distância ao anel externo
 }
 
-// Pré-computa bboxes por feature de cada camada (acelera muito)
+// Pré-computa bboxes por feature de UMA camada (acelera muito o layersAt()
+// e também alimenta o cálculo de imóveis únicos do planejamento de ACE).
+// Chamada assim que cada camada termina de carregar — não espera as outras.
 const spatialIndex = {};
-function buildIndex() {
-  for (const cfg of LAYERS) {
-    const feats = (cfg.data && cfg.data.features) || [];
-    spatialIndex[cfg.id] = feats.map(f => ({
-      bbox: bboxOf(f.geometry.coordinates),
-      geom: f.geometry,
-    }));
+function buildIndexFor(cfg) {
+  const feats = (cfg.data && cfg.data.features) || [];
+  spatialIndex[cfg.id] = feats.map(f => ({
+    bbox: bboxOf(f.geometry.coordinates),
+    geom: f.geometry,
+  }));
+}
+
+// Conta imóveis ÚNICOS entre uma ou mais camadas (ids[]), sem duplicar quem
+// está presente em mais de uma camada simultaneamente. Usa o centro do bbox
+// de cada feature e agrupa por grade uniforme de célula ≈ R_METERS: dois
+// pontos a até R_METERS de distância contam como o mesmo imóvel físico —
+// mesma tolerância já usada em layersAt() para casar pin/caso com camada.
+function imoveisUnicos(ids) {
+  if (!ids.length) return 0;
+  if (ids.length === 1) {
+    // 1 camada só: sem sobreposição a resolver, usa o n já exibido no card
+    // (garante consistência exata com o que a UI já mostra).
+    const cfg = layerById[ids[0]];
+    return cfg ? cfg.n : 0;
   }
+  const grid = new Map();   // "gx,gy" -> [[lng,lat], ...] de representantes já contados
+  let count = 0;
+  for (const id of ids) {
+    const idx = spatialIndex[id] || [];
+    for (const it of idx) {
+      const cx = (it.bbox[0] + it.bbox[2]) / 2;
+      const cy = (it.bbox[1] + it.bbox[3]) / 2;
+      const gx = Math.floor(cx / R_LNG_DEG), gy = Math.floor(cy / R_LAT_DEG);
+      let achou = false;
+      for (let dx = -1; dx <= 1 && !achou; dx++) {
+        for (let dy = -1; dy <= 1 && !achou; dy++) {
+          const bucket = grid.get((gx+dx) + ',' + (gy+dy));
+          if (!bucket) continue;
+          for (const p of bucket) {
+            const dLng = (cx-p[0]) * M_PER_DEG_LNG, dLat = (cy-p[1]) * M_PER_DEG_LAT;
+            if (Math.hypot(dLng, dLat) <= R_METERS) { achou = true; break; }
+          }
+        }
+      }
+      if (!achou) {
+        count++;
+        const key = gx + ',' + gy;
+        if (!grid.has(key)) grid.set(key, []);
+        grid.get(key).push([cx, cy]);
+      }
+    }
+  }
+  return count;
 }
 
 // Retorna Set de ids de camadas cujo imóvel mais próximo está a ≤ R_METERS do ponto.
@@ -1452,6 +1676,204 @@ function clearCasos() {
   if ($csvOverlap) $csvOverlap.innerHTML = '';
 }
 
+// ---------------------------------------------------------------------------
+// Evolução semanal de casos: mesma ideia do CSV de casos confirmados, mas
+// com uma coluna de data — agrega por semana epidemiológica (SE) e por zona.
+// ---------------------------------------------------------------------------
+
+// Semana epidemiológica no padrão CDC/OPAS (semana Dom-Sáb; SE1 = semana que
+// contém 4 de janeiro). date deve ser um Date em UTC (meia-noite).
+function semanaEpidemiologica(date) {
+  function week1Start(year) {
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const dow = jan4.getUTCDay();
+    const start = new Date(jan4);
+    start.setUTCDate(jan4.getUTCDate() - dow);
+    return start;
+  }
+  let year = date.getUTCFullYear();
+  let start = week1Start(year);
+  if (date < start) {
+    year -= 1; start = week1Start(year);
+  } else {
+    const nextStart = week1Start(year + 1);
+    if (date >= nextStart) { year += 1; start = nextStart; }
+  }
+  const diffDays = Math.floor((date - start) / 86400000);
+  return { ano: year, semana: Math.floor(diffDays / 7) + 1 };
+}
+
+// Aceita YYYY-MM-DD, YYYY/MM/DD, DD/MM/YYYY, DD-MM-YYYY (ano com 2 ou 4 dígitos).
+function parseDataFlexivel(str) {
+  if (!str) return null;
+  str = str.trim();
+  let m;
+  if ((m = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/))) {
+    return new Date(Date.UTC(+m[1], +m[2]-1, +m[3]));
+  }
+  if ((m = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/))) {
+    let ano = +m[3];
+    if (ano < 100) ano += (ano < 50 ? 2000 : 1900);
+    return new Date(Date.UTC(ano, +m[2]-1, +m[1]));
+  }
+  return null;
+}
+
+function parseHistorico(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return null;
+  const header = lines[0].split(/[,;\t]/).map(h => h.trim().toLowerCase().replace(/['"]/g,''));
+
+  const latCol  = header.findIndex(h => ['lat','latitude','latidude','lat_y'].includes(h));
+  const lonCol  = header.findIndex(h => ['lon','lng','longitude','long','lon_x','lng_x'].includes(h));
+  const dataCol = header.findIndex(h => ['data','date','dt','dt_notific','data_notificacao','data_caso','dt_sin_pri','data_sintomas'].includes(h));
+
+  if (latCol === -1 || lonCol === -1 || dataCol === -1) {
+    toast(`CSV precisa ter colunas lat, lon e data (encontrado: ${header.join(', ')})`, 'error');
+    return null;
+  }
+
+  const rows = [];
+  let invalidas = 0;
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cols = lines[i].split(/[,;\t]/).map(c => c.trim().replace(/['"]/g,''));
+    const lat = parseFloat(cols[latCol]);
+    const lon = parseFloat(cols[lonCol]);
+    const data = parseDataFlexivel(cols[dataCol]);
+    if (!isFinite(lat) || !isFinite(lon) || !data) { invalidas++; continue; }
+    rows.push({lat, lon, data});
+  }
+  if (invalidas > 0) toast(`${invalidas} linha(s) ignorada(s) por data/coordenada inválida.`, 'error');
+  return rows;
+}
+
+let trendData = null;   // { agg: {camadaId: {seKey: count}}, seMeta: {seKey: {ano,semana}} }
+
+function loadTrend(text) {
+  if (!indexReady) { toast('Aguarde as camadas carregarem antes de importar o histórico.', 'error'); return; }
+  const rows = parseHistorico(text);
+  if (rows === null) return;
+  if (!rows.length) { toast('Nenhuma linha válida encontrada no CSV.', 'error'); return; }
+
+  const agg = {};
+  [...LAYERS.map(c => c.id), 'fora'].forEach(id => agg[id] = {});
+  const seMeta = {};
+
+  for (const r of rows) {
+    const {ano, semana} = semanaEpidemiologica(r.data);
+    const seKey = `${ano}-${String(semana).padStart(2,'0')}`;
+    seMeta[seKey] = {ano, semana};
+    const hit = layersAt(r.lon, r.lat);
+    if (hit.size === 0) agg.fora[seKey] = (agg.fora[seKey]||0) + 1;
+    else hit.forEach(id => { agg[id][seKey] = (agg[id][seKey]||0) + 1; });
+  }
+
+  trendData = { agg, seMeta };
+  document.getElementById('trendResult').style.display = 'block';
+  populateTrendZona();
+  renderTrend();
+  toast(`${fmtN(rows.length)} casos históricos processados.`);
+}
+
+function populateTrendZona() {
+  const $sel = document.getElementById('trendZona');
+  const prev = $sel.value;
+  $sel.innerHTML = LAYERS.map(c => `<option value="${c.id}">${c.nome}</option>`).join('')
+    + `<option value="fora">Fora das áreas de risco</option>`;
+  if (prev && [...$sel.options].some(o => o.value === prev)) $sel.value = prev;
+}
+
+function renderTrend() {
+  if (!trendData) return;
+  const zonaId = document.getElementById('trendZona').value;
+  const dados = trendData.agg[zonaId] || {};
+  const seMeta = trendData.seMeta;
+  const seKeys = Object.keys(dados).sort((a,b) => {
+    const [ay,aw] = a.split('-').map(Number), [by,bw] = b.split('-').map(Number);
+    return (ay*100+aw) - (by*100+bw);
+  });
+
+  const $summary = document.getElementById('trendSummary');
+  const $chart = document.getElementById('trendChart');
+  const $tableWrap = document.getElementById('trendTableWrap');
+
+  if (!seKeys.length) {
+    $summary.innerHTML = '';
+    $chart.innerHTML = '<div class="trend-empty">Nenhum caso dessa zona no histórico importado.</div>';
+    $tableWrap.innerHTML = '';
+    return;
+  }
+
+  const valores = seKeys.map(k => dados[k]);
+  const max = Math.max(...valores, 1);
+
+  // resumo: última semana vs penúltima
+  if (seKeys.length >= 2) {
+    const ultimo = valores[valores.length-1], penultimo = valores[valores.length-2];
+    const diff = ultimo - penultimo;
+    const pct = penultimo > 0 ? Math.round((diff/penultimo)*100) : (ultimo>0 ? 100 : 0);
+    const cls = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat');
+    const seta = diff > 0 ? '▲' : (diff < 0 ? '▼' : '—');
+    const semAnt = seMeta[seKeys[seKeys.length-2]];
+    $summary.innerHTML = `<span class="trend-delta ${cls}">${seta} ${Math.abs(pct)}%</span>
+      <span class="trend-summary-lbl">vs. SE${String(semAnt.semana).padStart(2,'0')}/${semAnt.ano}</span>`;
+  } else {
+    $summary.innerHTML = `<span class="trend-summary-lbl">só há 1 semana de dados nessa zona até agora</span>`;
+  }
+
+  // gráfico de barras SVG
+  const W = 280, H = 110, padL = 4, padR = 4, padB = 18, padT = 6;
+  const n = seKeys.length;
+  const bw = Math.max((W - padL - padR) / n - 3, 2);
+  const cor = (zonaId === 'fora') ? '#5a6470' : (layerById[zonaId] ? layerById[zonaId].cor : '#3fb8af');
+  let bars = '';
+  seKeys.forEach((k, i) => {
+    const v = dados[k];
+    const h = (v / max) * (H - padT - padB);
+    const x = padL + i * ((W-padL-padR)/n);
+    const y = H - padB - h;
+    bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(h,1).toFixed(1)}" fill="${cor}" rx="1.5"><title>SE${String(seMeta[k].semana).padStart(2,'0')}/${seMeta[k].ano}: ${v} caso${v===1?'':'s'}</title></rect>`;
+  });
+  const labelIdx = new Set([0, Math.floor((n-1)/2), n-1]);
+  let labels = '';
+  seKeys.forEach((k, i) => {
+    if (!labelIdx.has(i)) return;
+    const x = padL + i * ((W-padL-padR)/n) + bw/2;
+    labels += `<text x="${x.toFixed(1)}" y="${H-4}" font-size="8" fill="#8b95a3" text-anchor="middle">SE${seMeta[k].semana}</text>`;
+  });
+  $chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">${bars}${labels}</svg>`;
+
+  // tabela (mais recente primeiro)
+  const rowsHtml = [...seKeys].reverse().map((k) => {
+    const i = seKeys.indexOf(k);
+    const v = dados[k];
+    const prevV = i > 0 ? dados[seKeys[i-1]] : null;
+    let varHtml = '<span class="tv-flat">—</span>';
+    if (prevV !== null) {
+      const d = v - prevV;
+      const cls = d > 0 ? 'tv-up' : (d < 0 ? 'tv-down' : 'tv-flat');
+      const seta = d > 0 ? '▲' : (d < 0 ? '▼' : '—');
+      varHtml = `<span class="${cls}">${seta} ${d>0?'+':''}${d}</span>`;
+    }
+    const meta = seMeta[k];
+    return `<tr><td class="tn">SE${String(meta.semana).padStart(2,'0')}/${meta.ano}</td><td>${v}</td><td>${varHtml}</td></tr>`;
+  }).join('');
+  $tableWrap.innerHTML = `<table class="trend-table">
+    <thead><tr><th>Semana</th><th>Casos</th><th>Variação</th></tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>`;
+}
+
+function clearTrend() {
+  trendData = null;
+  document.getElementById('trendResult').style.display = 'none';
+  document.getElementById('trendFile').value = '';
+  document.getElementById('trendChart').innerHTML = '';
+  document.getElementById('trendTableWrap').innerHTML = '';
+  document.getElementById('trendSummary').innerHTML = '';
+}
+
 // Drag & drop
 const $csvDrop = document.getElementById('csvDrop');
 const $csvFile = document.getElementById('csvFile');
@@ -1479,12 +1901,36 @@ $csvFile.addEventListener('change', e => {
 
 document.getElementById('csvClear').addEventListener('click', clearCasos);
 
+// Drag & drop — histórico semanal
+const $trendDrop = document.getElementById('trendDrop');
+const $trendFile = document.getElementById('trendFile');
+
+$trendDrop.addEventListener('dragover', e => { e.preventDefault(); $trendDrop.classList.add('over'); });
+$trendDrop.addEventListener('dragleave', () => $trendDrop.classList.remove('over'));
+$trendDrop.addEventListener('drop', e => {
+  e.preventDefault();
+  $trendDrop.classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadTrend(ev.target.result);
+  reader.readAsText(file, 'UTF-8');
+});
+$trendFile.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadTrend(ev.target.result);
+  reader.readAsText(file, 'UTF-8');
+});
+document.getElementById('trendClear').addEventListener('click', clearTrend);
+document.getElementById('trendZona').addEventListener('change', renderTrend);
+
 // ===========================================================================
 // Bootstrap
 // ===========================================================================
 async function bootstrap() {
-  await init();           // renderiza as camadas
-  buildIndex();           // pré-calcula bboxes p/ point-in-polygon
+  await init();           // renderiza as camadas (índice já é construído camada a camada)
   restore();              // pins do localStorage
   renderList();
   renderValidation();
